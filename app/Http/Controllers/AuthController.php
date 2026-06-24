@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,8 @@ class AuthController extends Controller
 
         $token = $user->createToken('api-token')->plainTextToken;
 
+        ActivityLog::log('login', $user, null, null, $user->id);
+
         return response()->json([
             'token' => $token,
             'user' => $user->load('roles.permissions'),
@@ -39,7 +42,11 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        ActivityLog::log('logout', $user, null, null, $user->id);
+
+        $user->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out successfully.']);
     }
