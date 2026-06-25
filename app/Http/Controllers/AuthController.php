@@ -14,8 +14,8 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'email'    => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'max:255'],
         ]);
 
         $user = User::where('email', $request->email)->first();

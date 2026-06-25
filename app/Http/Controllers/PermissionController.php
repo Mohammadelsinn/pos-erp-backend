@@ -16,9 +16,9 @@ class PermissionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'unique:permissions,name'],
-            'display_name' => ['required', 'string'],
-            'description' => ['nullable', 'string'],
+            'name'         => ['required', 'string', 'max:100', 'unique:permissions,name'],
+            'display_name' => ['required', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:500'],
         ]);
 
         $permission = Permission::create($data);
@@ -34,9 +34,9 @@ class PermissionController extends Controller
     public function update(Request $request, Permission $permission): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'unique:permissions,name,' . $permission->id],
-            'display_name' => ['sometimes', 'string'],
-            'description' => ['nullable', 'string'],
+            'name'         => ['sometimes', 'string', 'max:100', 'unique:permissions,name,' . $permission->id],
+            'display_name' => ['sometimes', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:500'],
         ]);
 
         $permission->update($data);
