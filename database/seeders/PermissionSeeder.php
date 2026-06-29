@@ -16,6 +16,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'view_dashboard',      'display_name' => 'View Dashboard',      'description' => 'Access the main dashboard'],
             ['name' => 'manage_settings',     'display_name' => 'Manage Settings',     'description' => 'Configure system settings'],
             ['name' => 'manage_branches',     'display_name' => 'Manage Branches',     'description' => 'Create, update, and delete branches'],
+            ['name' => 'manage_products',     'display_name' => 'Manage Products',     'description' => 'Create, update, and delete products, categories, and brands'],
         ];
 
         foreach ($permissions as $perm) {

@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\BrandController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -47,5 +50,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:manage_branches')->group(function () {
         Route::apiResource('branches', BranchController::class);
         Route::patch('branches/{branch}/toggle-status', [BranchController::class, 'toggleStatus']);
+    });
+
+    // Product catalog management — requires manage_products permission
+    Route::middleware('permission:manage_products')->group(function () {
+        Route::apiResource('categories', CategoryController::class);
+        Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus']);
+
+        Route::apiResource('brands', BrandController::class);
+        Route::patch('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus']);
+
+        Route::apiResource('products', ProductController::class);
+        Route::patch('products/{product}/toggle-status', [ProductController::class, 'toggleStatus']);
     });
 });
