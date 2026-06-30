@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImageController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
@@ -68,5 +69,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('products/{product}/images', [ProductImageController::class, 'store']);
         Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
         Route::patch('products/{product}/images/{image}/set-primary', [ProductImageController::class, 'setPrimary']);
+    });
+
+    // Inventory management — requires manage_inventory permission
+    Route::middleware('permission:manage_inventory')->group(function () {
+        Route::get('inventory', [InventoryController::class, 'index']);
+        Route::post('inventory/adjust', [InventoryController::class, 'adjust']);
+        Route::get('inventory/{inventory}/history', [InventoryController::class, 'history']);
     });
 });

@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import BranchesManagement from './pages/BranchesManagement';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
+import Inventory from './pages/Inventory';
 
 function App() {
     return (
@@ -36,7 +37,7 @@ function App() {
                         <Route path="products" element={<Products />} />
                         <Route path="products/create" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
-                        <Route path="inventory" element={<PlaceholderPage title="Inventory Stock" />} />
+                        <Route path="inventory" element={<Inventory />} />
                         <Route path="purchases" element={<PlaceholderPage title="Purchases" />} />
                         <Route path="suppliers" element={<PlaceholderPage title="Suppliers" />} />
                         <Route path="warehouses" element={<PlaceholderPage title="Warehouses" />} />
