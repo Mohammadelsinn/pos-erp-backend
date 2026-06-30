@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductImageController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -62,5 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('products', ProductController::class);
         Route::patch('products/{product}/toggle-status', [ProductController::class, 'toggleStatus']);
+
+        Route::post('products/{product}/images', [ProductImageController::class, 'store']);
+        Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
+        Route::patch('products/{product}/images/{image}/set-primary', [ProductImageController::class, 'setPrimary']);
     });
 });
