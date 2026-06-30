@@ -4,7 +4,8 @@ import {
     LayoutGrid, Calculator, ShoppingBag, Package, Archive, 
     ArrowUpRight, Truck, Warehouse, DollarSign, TrendingDown, 
     CreditCard, Percent, Key, Users, UserCheck, GitBranch, 
-    CheckSquare, Store, FileText, Settings, Shield, ChevronLeft, ChevronRight, Menu, Lock, Building
+    CheckSquare, Store, FileText, Settings, Shield, ChevronLeft, ChevronRight, Menu, Lock, Building,
+    AlertTriangle
 } from 'lucide-react';
 
 const navigationGroups = [
@@ -21,6 +22,9 @@ const navigationGroups = [
         items: [
             { name: "Products", path: "/products", icon: Package },
             { name: "Inventory Stock", path: "/inventory", icon: Archive },
+            { name: "Stock Adjustment", path: "/inventory/adjust", icon: CheckSquare },
+            { name: "Damaged/Lost Stock", path: "/inventory/damaged-lost", icon: AlertTriangle },
+            { name: "Movement History", path: "/inventory/movement-history", icon: FileText },
             { name: "Purchases", path: "/purchases", icon: ArrowUpRight },
             { name: "Suppliers", path: "/suppliers", icon: Truck },
             { name: "Warehouses", path: "/warehouses", icon: Warehouse },

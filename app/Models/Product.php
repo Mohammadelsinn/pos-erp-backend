@@ -55,6 +55,11 @@ class Product extends Model
         return $this->hasMany(ProductImage::class);
     }
 
+    public function inventories()
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
     public function getProfitMarginAttribute()
     {
         if ($this->selling_price > 0) {

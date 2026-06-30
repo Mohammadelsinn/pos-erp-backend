@@ -46,6 +46,13 @@ class ProductController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Branch Filter
+        if ($request->has('branch_id') && !empty($request->branch_id)) {
+            $query->whereHas('inventories', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
         // Sorting
         $sortField = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_dir', 'desc');

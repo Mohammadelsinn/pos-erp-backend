@@ -290,25 +290,29 @@ export default function Inventory() {
             header: 'Status',
             accessor: 'stock_status',
             render: (status) => {
-                let statusText = 'In Stock';
-                let dotColor = 'bg-emerald-500';
-                let textColor = 'text-emerald-400';
-
                 if (status === 'out_of_stock') {
-                    statusText = 'Out of Stock';
-                    dotColor = 'bg-rose-500';
-                    textColor = 'text-rose-400';
-                } else if (status === 'low_stock') {
-                    statusText = 'Low Stock';
-                    dotColor = 'bg-amber-500';
-                    textColor = 'text-amber-400';
+                    return (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                            <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Out of Stock</span>
+                        </span>
+                    );
+                }
+                
+                if (status === 'low_stock') {
+                    return (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.08)]">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Low Stock</span>
+                        </span>
+                    );
                 }
 
                 return (
-                    <div className={`inline-flex items-center gap-1.5 font-bold text-xs ${textColor}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></span>
-                        <span>{statusText}</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>In Stock</span>
+                    </span>
                 );
             }
         },

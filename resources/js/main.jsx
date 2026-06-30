@@ -15,6 +15,9 @@ import BranchesManagement from './pages/BranchesManagement';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
 import Inventory from './pages/Inventory';
+import StockAdjustment from './pages/StockAdjustment';
+import DamagedLostStock from './pages/DamagedLostStock';
+import StockMovementHistory from './pages/StockMovementHistory';
 
 function App() {
     return (
@@ -38,6 +41,9 @@ function App() {
                         <Route path="products/create" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
                         <Route path="inventory" element={<Inventory />} />
+                        <Route path="inventory/adjust" element={<StockAdjustment />} />
+                        <Route path="inventory/damaged-lost" element={<DamagedLostStock />} />
+                        <Route path="inventory/movement-history" element={<StockMovementHistory />} />
                         <Route path="purchases" element={<PlaceholderPage title="Purchases" />} />
                         <Route path="suppliers" element={<PlaceholderPage title="Suppliers" />} />
                         <Route path="warehouses" element={<PlaceholderPage title="Warehouses" />} />
