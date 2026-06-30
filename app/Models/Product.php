@@ -3,60 +3,71 @@
 namespace App\Models;
 
 use App\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use LogsActivity;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'category_id',
         'brand_id',
+        'image_path',
+        'status',
+        'has_variations',
         'cost_price',
         'selling_price',
-        'tax_percentage',
-        'is_active',
+        'tax',
+        'sku',
+        'barcode',
     ];
 
     protected $casts = [
-        'cost_price'     => 'decimal:2',
-        'selling_price'  => 'decimal:2',
-        'tax_percentage' => 'decimal:2',
-        'profit_margin'  => 'decimal:2',
-        'is_active'      => 'boolean',
+        'has_variations' => 'boolean',
+        'cost_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'tax' => 'decimal:2',
     ];
 
-    protected static function boot(): void
-    {
-        parent::boot();
+    protected $appends = ['profit_margin', 'image_url'];
 
-        // Auto-compute gross profit margin on every save
-        static::saving(function (Product $product) {
-            $selling = (float) $product->selling_price;
-            $cost    = (float) $product->cost_price;
-
-            $product->profit_margin = $selling > 0
-                ? round((($selling - $cost) / $selling) * 100, 2)
-                : 0;
-        });
-    }
-
-    public function category(): BelongsTo
+    public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function brand(): BelongsTo
+    public function brand()
     {
         return $this->belongsTo(Brand::class);
     }
 
-    public function images(): HasMany
+    public function variations()
+    {
+        return $this->hasMany(ProductVariation::class);
+    }
+
+    public function images()
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function getProfitMarginAttribute()
+    {
+        if ($this->selling_price > 0) {
+            return round((($this->selling_price - $this->cost_price) / $this->selling_price) * 100, 2);
+        }
+        return 0;
+    }
+
+    public function getImageUrlAttribute()
+    {
+        if ($this->image_path) {
+            return url('storage/' . $this->image_path);
+        }
+        return null;
     }
 }

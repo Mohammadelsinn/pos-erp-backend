@@ -10,7 +10,7 @@ class PermissionController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(Permission::all());
+        return response()->json(Permission::with('roles')->get());
     }
 
     public function store(Request $request): JsonResponse

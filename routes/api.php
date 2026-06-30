@@ -2,12 +2,12 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchController;
-use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ConfigController;
-use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImageController;
+use App\Http\Controllers\ConfigController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
@@ -55,15 +55,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Product catalog management — requires manage_products permission
     Route::middleware('permission:manage_products')->group(function () {
-        Route::apiResource('categories', CategoryController::class);
-        Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus']);
-
-        Route::apiResource('brands', BrandController::class);
-        Route::patch('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus']);
-
-        Route::apiResource('products', ProductController::class);
+        Route::post('products/upload-image', [ProductController::class, 'uploadImage']);
+        Route::post('products/bulk-delete', [ProductController::class, 'bulkDelete']);
+        Route::post('products/bulk-status', [ProductController::class, 'bulkStatus']);
         Route::patch('products/{product}/toggle-status', [ProductController::class, 'toggleStatus']);
+        Route::apiResource('products', ProductController::class);
+        
+        Route::apiResource('categories', CategoryController::class);
+        Route::apiResource('brands', BrandController::class);
 
+        // Product Images routes (from HEAD)
         Route::post('products/{product}/images', [ProductImageController::class, 'store']);
         Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
         Route::patch('products/{product}/images/{image}/set-primary', [ProductImageController::class, 'setPrimary']);

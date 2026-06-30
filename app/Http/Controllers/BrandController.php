@@ -3,63 +3,80 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class BrandController extends Controller
 {
-    public function index(): JsonResponse
+    public function index()
     {
-        return response()->json(Brand::all());
+        return response()->json(
+            Brand::withCount('products')->orderBy('name')->get()
+        );
     }
 
-    public function show(Brand $brand): JsonResponse
+    public function store(Request $request)
     {
-        return response()->json($brand);
-    }
-
-    public function store(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'is_active'   => ['sometimes', 'boolean'],
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:brands,slug',
+            'description' => 'nullable|string',
         ]);
 
-        $brand = Brand::create($data + ['is_active' => true]);
+        if (empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['name']);
+            
+            // Handle duplicate slug
+            $originalSlug = $validated['slug'];
+            $count = 1;
+            while (Brand::where('slug', $validated['slug'])->exists()) {
+                $validated['slug'] = $originalSlug . '-' . $count++;
+            }
+        } else {
+            $validated['slug'] = Str::slug($validated['slug']);
+        }
+
+        $brand = Brand::create($validated);
+        $brand->loadCount('products');
 
         return response()->json($brand, 201);
     }
 
-    public function update(Request $request, Brand $brand): JsonResponse
+    public function show(Brand $brand)
     {
-        $data = $request->validate([
-            'name'        => ['sometimes', 'string', 'max:255'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'is_active'   => ['sometimes', 'boolean'],
+        $brand->loadCount('products');
+        return response()->json($brand);
+    }
+
+    public function update(Request $request, Brand $brand)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:brands,slug,' . $brand->id,
+            'description' => 'nullable|string',
         ]);
 
-        $brand->update($data);
+        if (empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['name']);
+            
+            $originalSlug = $validated['slug'];
+            $count = 1;
+            while (Brand::where('slug', $validated['slug'])->where('id', '!=', $brand->id)->exists()) {
+                $validated['slug'] = $originalSlug . '-' . $count++;
+            }
+        } else {
+            $validated['slug'] = Str::slug($validated['slug']);
+        }
+
+        $brand->update($validated);
+        $brand->loadCount('products');
 
         return response()->json($brand);
     }
 
-    public function destroy(Brand $brand): JsonResponse
+    public function destroy(Brand $brand)
     {
         $brand->delete();
-
-        return response()->json(['message' => 'Brand deleted.']);
-    }
-
-    public function toggleStatus(Brand $brand): JsonResponse
-    {
-        $brand->update(['is_active' => ! $brand->is_active]);
-
-        $status = $brand->is_active ? 'activated' : 'deactivated';
-
-        return response()->json([
-            'message' => "Brand {$status}.",
-            'brand'   => $brand,
-        ]);
+        return response()->json(['message' => 'Brand deleted successfully']);
     }
 }

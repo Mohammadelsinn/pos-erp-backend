@@ -23,7 +23,7 @@ class RoleSeeder extends Seeder
                 'name'         => 'manager',
                 'display_name' => 'Manager',
                 'description'  => 'Manages users and views dashboard',
-                'permissions'  => Permission::whereIn('name', ['manage_users', 'view_dashboard', 'manage_settings'])->pluck('id')->toArray(),
+                'permissions'  => Permission::whereIn('name', ['manage_users', 'view_dashboard', 'manage_settings', 'manage_products'])->pluck('id')->toArray(),
             ],
             [
                 'name'         => 'cashier',
