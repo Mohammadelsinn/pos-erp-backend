@@ -21,14 +21,16 @@ class ProductVariationController extends Controller
             'sku' => ['required', 'string', 'max:255', 'unique:product_variations,sku'],
             'barcode' => ['nullable', 'string', 'max:255', 'unique:product_variations,barcode'],
             'cost_price' => ['required', 'numeric', 'min:0'],
-            'selling_price' => ['required', 'numeric', 'min:0'],
+            'selling_price' => ['required', 'numeric', 'min:0.01'],
             'tax_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        $warnings = $this->priceWarning($data['cost_price'], $data['selling_price']);
+
         $variation = $product->variations()->create($data);
 
-        return response()->json($variation, 201);
+        return response()->json(array_merge($variation->toArray(), ['warnings' => $warnings]), 201);
     }
 
     public function show(Product $product, ProductVariation $variation): JsonResponse
@@ -47,14 +49,16 @@ class ProductVariationController extends Controller
             'sku' => ['sometimes', 'string', 'max:255', 'unique:product_variations,sku,' . $variation->id],
             'barcode' => ['nullable', 'string', 'max:255', 'unique:product_variations,barcode,' . $variation->id],
             'cost_price' => ['sometimes', 'numeric', 'min:0'],
-            'selling_price' => ['sometimes', 'numeric', 'min:0'],
+            'selling_price' => ['sometimes', 'numeric', 'min:0.01'],
             'tax_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $variation->update($data);
 
-        return response()->json($variation);
+        $warnings = $this->priceWarning($variation->cost_price, $variation->selling_price);
+
+        return response()->json(array_merge($variation->toArray(), ['warnings' => $warnings]));
     }
 
     public function destroy(Product $product, ProductVariation $variation): JsonResponse
@@ -78,6 +82,15 @@ class ProductVariationController extends Controller
             'message' => "Variation {$status}.",
             'variation' => $variation,
         ]);
+    }
+
+    private function priceWarning($costPrice, $sellingPrice): array
+    {
+        if ($sellingPrice < $costPrice) {
+            return ["Selling price ({$sellingPrice}) is lower than cost price ({$costPrice})."];
+        }
+
+        return [];
     }
 
     private function ensureBelongsToProduct(Product $product, ProductVariation $variation): void

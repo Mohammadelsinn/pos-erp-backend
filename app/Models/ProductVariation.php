@@ -31,7 +31,7 @@ class ProductVariation extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $appends = ['profit_margin'];
+    protected $appends = ['profit_margin', 'tax_amount', 'price_after_tax'];
 
     public function product()
     {
@@ -44,5 +44,15 @@ class ProductVariation extends Model
             return round((($this->selling_price - $this->cost_price) / $this->selling_price) * 100, 2);
         }
         return 0;
+    }
+
+    public function getTaxAmountAttribute()
+    {
+        return round($this->selling_price * ($this->tax_percentage / 100), 2);
+    }
+
+    public function getPriceAfterTaxAttribute()
+    {
+        return round($this->selling_price + $this->tax_amount, 2);
     }
 }
