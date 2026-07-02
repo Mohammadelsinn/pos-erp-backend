@@ -9,9 +9,11 @@ use Illuminate\Http\Request;
 
 class ProductVariationController extends Controller
 {
-    public function index(Product $product): JsonResponse
+    public function index(Product $product, Request $request): JsonResponse
     {
-        return response()->json($product->variations);
+        $perPage = $request->get('per_page', 10);
+
+        return response()->json($product->variations()->paginate($perPage));
     }
 
     public function store(Request $request, Product $product): JsonResponse

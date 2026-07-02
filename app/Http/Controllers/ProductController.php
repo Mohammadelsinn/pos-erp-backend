@@ -53,6 +53,14 @@ class ProductController extends Controller
             });
         }
 
+        // Price range filter
+        if ($request->filled('min_price')) {
+            $query->where('selling_price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('selling_price', '<=', $request->max_price);
+        }
+
         // Sorting
         $sortField = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_dir', 'desc');
@@ -250,6 +258,15 @@ class ProductController extends Controller
     {
         $product->status = $product->status === 'active' ? 'inactive' : 'active';
         $product->save();
+
+        // Deactivating a product deactivates all its variations too.
+        // Reactivating the product leaves variation status untouched.
+        if ($product->status === 'inactive') {
+            $product->variations()->update(['is_active' => false]);
+        }
+
+        $product->load(['category', 'brand', 'variations']);
+
         return response()->json($product);
     }
 
