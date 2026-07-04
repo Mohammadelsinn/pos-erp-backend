@@ -10,7 +10,8 @@ export default function Table({
     totalPages = 1,
     onPageChange = null,
     totalRecords = 0,
-    pageSize = 10
+    pageSize = 10,
+    minWidth = '800px'
 }) {
     // Generate loading skeleton rows
     const renderSkeletons = () => {
@@ -30,7 +31,7 @@ export default function Table({
             {/* Table Container */}
             <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/40 shadow-xl backdrop-blur-xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs font-semibold">
+                    <table className="w-full text-left border-collapse text-xs font-semibold" style={{ minWidth }}>
                         <thead>
                             <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
                                 {columns.map((col) => (

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Mail, Lock, Eye, EyeOff, Terminal, Key } from 'lucide-react';
 
@@ -12,6 +13,23 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('login'); // login / help
+    const [companyInfo, setCompanyInfo] = useState({
+        name: 'System ERP',
+        logo: ''
+    });
+
+    useEffect(() => {
+        axios.get('/api/settings')
+            .then(res => {
+                setCompanyInfo({
+                    name: res.data.company_name || 'System ERP',
+                    logo: res.data.company_logo || ''
+                });
+            })
+            .catch(err => {
+                console.warn('Failed to load company info in login page', err);
+            });
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -52,11 +70,17 @@ export default function Login() {
             <div className="w-full max-w-md z-10">
                 {/* Logo / Header */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-xl shadow-indigo-500/20 mb-4 animate-pulse">
-                        <Shield className="w-8 h-8" />
-                    </div>
+                    {companyInfo.logo ? (
+                        <div className="inline-flex items-center justify-center w-16 h-16 border border-slate-800 bg-slate-950/40 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/5 mb-4">
+                            <img src={companyInfo.logo} alt="Company Logo" className="w-full h-full object-contain animate-fadeIn" />
+                        </div>
+                    ) : (
+                        <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-xl shadow-indigo-500/20 mb-4 animate-pulse">
+                            <Shield className="w-8 h-8" />
+                        </div>
+                    )}
                     <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                        System ERP
+                        {companyInfo.name}
                     </h1>
                     <p className="mt-2 text-sm text-slate-400">
                         POS, Inventory & Accounting Suite

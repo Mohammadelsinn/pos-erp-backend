@@ -5,12 +5,19 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(() => {
-        const savedUser = localStorage.getItem('pos_erp_user');
-        const token = localStorage.getItem('pos_erp_token');
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        try {
+            const savedUser = localStorage.getItem('pos_erp_user');
+            const token = localStorage.getItem('pos_erp_token');
+            if (token) {
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
+            return (savedUser && savedUser !== 'undefined') ? JSON.parse(savedUser) : null;
+        } catch (e) {
+            console.error('Failed to parse pos_erp_user from localStorage', e);
+            localStorage.removeItem('pos_erp_user');
+            localStorage.removeItem('pos_erp_token');
+            return null;
         }
-        return savedUser ? JSON.parse(savedUser) : null;
     });
     const [activeBranch, setActiveBranch] = useState(() => {
         return localStorage.getItem('pos_erp_branch') || 'Main Branch';

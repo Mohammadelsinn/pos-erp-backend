@@ -6,11 +6,44 @@
 @source '../**/*.js';
 @source '../**/*.jsx';
 
+:root {
+    --bg-main: #090d16;
+    --bg-card: #0f172a;
+    --border-color: #1e293b;
+    --border-light: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #e2e8f0;
+    --text-muted: #94a3b8;
+}
+
+.light {
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --border-color: #cbd5e1;
+    --border-light: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+}
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --animate-fade-in-up: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     --animate-shake: shake 0.4s ease-in-out;
+
+    --color-slate-950: var(--bg-main);
+    --color-slate-900: var(--bg-card);
+    --color-slate-800: var(--border-color);
+    --color-slate-850: var(--border-light);
+    --color-slate-855: var(--border-light);
+    --color-slate-100: var(--text-primary);
+    --color-slate-200: var(--text-secondary);
+    --color-slate-205: var(--text-secondary);
+    --color-slate-300: var(--text-secondary);
+    --color-slate-350: var(--text-muted);
+    --color-slate-400: var(--text-muted);
+    --color-slate-450: var(--text-primary);
 
     @keyframes fade-in-up {
         from {

@@ -20,6 +20,7 @@ import Table from '../components/Table';
 import Modal from '../components/Modal';
 import Button from '../components/Button';
 import { Input, Select } from '../components/FormControls';
+import ProductQuickView from '../components/ProductQuickView';
 
 export default function Inventory() {
     // Inventory Items state
@@ -47,6 +48,7 @@ export default function Inventory() {
     const [adjustModalOpen, setAdjustModalOpen] = useState(false);
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [quickViewProduct, setQuickViewProduct] = useState(null);
     
     // Adjust Form States
     const [adjustType, setAdjustType] = useState('increment'); // 'increment', 'decrement', 'set'
@@ -199,9 +201,13 @@ export default function Inventory() {
             accessor: 'product',
             render: (product, item) => (
                 <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-100 text-xs sm:text-sm tracking-tight">
-                        {product?.name}
-                    </span>
+                    <button
+                        onClick={() => setQuickViewProduct(product)}
+                        className="font-bold text-slate-100 text-xs sm:text-sm tracking-tight hover:text-indigo-400 text-left transition-colors flex items-center gap-1.5 group"
+                        title="Click to Quick View Product details"
+                    >
+                        <span>{product?.name}</span>
+                    </button>
                     <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
                         {product?.category && (
                             <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-semibold uppercase">
@@ -723,6 +729,14 @@ export default function Inventory() {
                     </div>
                 )}
             </Modal>
+
+            {/* Quick View Modal */}
+            {quickViewProduct && (
+                <ProductQuickView
+                    product={quickViewProduct}
+                    onClose={() => setQuickViewProduct(null)}
+                />
+            )}
 
         </PageWrapper>
     );

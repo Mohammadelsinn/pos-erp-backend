@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Menu, Search, Bell, GitBranch, ChevronDown, User, LogOut, Settings, HelpCircle } from 'lucide-react';
+import { Menu, Search, Bell, GitBranch, ChevronDown, User, LogOut, Settings, HelpCircle, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -17,6 +17,23 @@ export default function TopNavbar({ toggleSidebar, toggleMobileSidebar }) {
     const [branchOpen, setBranchOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    
+    // Theme state
+    const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'dark');
+
+    useEffect(() => {
+        const root = document.documentElement;
+        if (theme === 'light') {
+            root.classList.add('light');
+        } else {
+            root.classList.remove('light');
+        }
+        localStorage.setItem('app-theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
 
     // Refs for clicking outside
     const branchRef = useRef(null);
@@ -118,6 +135,15 @@ export default function TopNavbar({ toggleSidebar, toggleMobileSidebar }) {
                         </div>
                     )}
                 </div>
+
+                {/* Theme Toggle Button */}
+                <button
+                    onClick={toggleTheme}
+                    className="p-2 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-400 hover:text-slate-205 transition-all flex items-center justify-center"
+                    title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                    {theme === 'dark' ? <Sun className="w-4.5 h-4.5 text-amber-500" /> : <Moon className="w-4.5 h-4.5 text-indigo-400" />}
+                </button>
 
                 {/* Notifications Panel */}
                 <div className="relative" ref={notifRef}>

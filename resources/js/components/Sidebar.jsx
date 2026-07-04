@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import axios from 'axios';
 import { 
     LayoutGrid, Calculator, ShoppingBag, Package, Archive, 
     ArrowUpRight, Truck, Warehouse, DollarSign, TrendingDown, 
@@ -64,6 +65,36 @@ const navigationGroups = [
 ];
 
 export default function Sidebar({ isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar }) {
+    const [companyInfo, setCompanyInfo] = useState({
+        name: 'System ERP',
+        logo: ''
+    });
+
+    const fetchCompanyInfo = async () => {
+        try {
+            const response = await axios.get('/api/settings');
+            setCompanyInfo({
+                name: response.data.company_name || 'System ERP',
+                logo: response.data.company_logo || ''
+            });
+        } catch (err) {
+            console.warn('Failed to load company settings in sidebar', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchCompanyInfo();
+
+        const handleUpdate = () => {
+            fetchCompanyInfo();
+        };
+
+        window.addEventListener('company-settings-updated', handleUpdate);
+        return () => {
+            window.removeEventListener('company-settings-updated', handleUpdate);
+        };
+    }, []);
+
     return (
         <>
             {/* Mobile Sidebar Overlay */}
@@ -83,12 +114,18 @@ export default function Sidebar({ isOpen, toggleSidebar, isMobileOpen, closeMobi
                 {/* Brand / Logo Area */}
                 <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/85">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="flex items-center justify-center p-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shrink-0 shadow-lg shadow-indigo-500/10">
-                            <Shield className="w-5 h-5" />
-                        </div>
+                        {companyInfo.logo ? (
+                            <div className="w-9 h-9 border border-slate-800 bg-slate-950/40 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-indigo-500/5">
+                                <img src={companyInfo.logo} alt="Logo" className="w-full h-full object-contain" />
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center p-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shrink-0 shadow-lg shadow-indigo-500/10">
+                                <Shield className="w-5 h-5" />
+                            </div>
+                        )}
                         {isOpen && (
                             <span className="font-bold text-sm bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent truncate tracking-tight">
-                                System ERP
+                                {companyInfo.name}
                             </span>
                         )}
                     </div>

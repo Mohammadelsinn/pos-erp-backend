@@ -242,35 +242,38 @@ export default function Products() {
             </div>
 
             {/* Custom Premium Tabs */}
-            <div className="flex border-b border-slate-800 gap-1">
+            <div className="flex border-b border-slate-800 gap-2">
                 <button
                     onClick={() => { setActiveTab('products'); setFormErrors({}); }}
-                    className={`px-5 py-3 text-xs font-semibold tracking-wide border-b-2 transition-all ${
+                    className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'products'
-                            ? 'text-indigo-400 border-indigo-500 bg-slate-900/20'
-                            : 'text-slate-400 border-transparent hover:text-slate-200'
+                            ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
+                            : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/40'
                     }`}
                 >
+                    <Layers className="w-3.5 h-3.5" />
                     Products List
                 </button>
                 <button
                     onClick={() => { setActiveTab('categories'); setFormErrors({}); }}
-                    className={`px-5 py-3 text-xs font-semibold tracking-wide border-b-2 transition-all ${
+                    className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'categories'
-                            ? 'text-indigo-400 border-indigo-500 bg-slate-900/20'
-                            : 'text-slate-400 border-transparent hover:text-slate-200'
+                            ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
+                            : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/40'
                     }`}
                 >
+                    <FolderPlus className="w-3.5 h-3.5" />
                     Categories Management
                 </button>
                 <button
                     onClick={() => { setActiveTab('brands'); setFormErrors({}); }}
-                    className={`px-5 py-3 text-xs font-semibold tracking-wide border-b-2 transition-all ${
+                    className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'brands'
-                            ? 'text-indigo-400 border-indigo-500 bg-slate-900/20'
-                            : 'text-slate-400 border-transparent hover:text-slate-200'
+                            ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
+                            : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/40'
                     }`}
                 >
+                    <Tag className="w-3.5 h-3.5" />
                     Brands Management
                 </button>
             </div>
@@ -367,7 +370,7 @@ export default function Products() {
                     {/* Products Table */}
                     <div className="border border-slate-800/85 rounded-xl overflow-hidden bg-slate-900/20">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse min-w-[850px]">
                                 <thead>
                                     <tr className="bg-slate-900 border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                                         <th className="p-4 w-12 text-center">
@@ -440,16 +443,43 @@ export default function Products() {
                                                         )}
                                                     </td>
                                                     <td className="p-4">
-                                                        {p.has_variations ? (
-                                                            <span className="text-[10px] bg-indigo-500/5 text-indigo-300 px-2 py-0.5 border border-indigo-500/15 rounded-md font-semibold">
-                                                                Variable
-                                                            </span>
-                                                        ) : (
-                                                            <div>
-                                                                <span className="text-slate-200 block">${p.selling_price}</span>
-                                                                <span className="text-[9px] text-slate-500">Cost: ${p.cost_price}</span>
-                                                            </div>
-                                                        )}
+                                                         {p.has_variations ? (
+                                                             <div className="flex flex-col gap-1">
+                                                                 <span className="text-[10px] bg-indigo-505/5 text-indigo-300 px-2 py-0.5 border border-indigo-500/15 rounded-md font-semibold w-max">
+                                                                     Variable
+                                                                 </span>
+                                                                 {p.variations && p.variations.length > 0 && (
+                                                                     <span className="text-[10px] text-indigo-400 font-semibold block">
+                                                                         {(() => {
+                                                                             let totalMargin = 0;
+                                                                             let count = 0;
+                                                                             p.variations.forEach(v => {
+                                                                                 const c = parseFloat(v.cost_price);
+                                                                                 const s = parseFloat(v.selling_price);
+                                                                                 if (!isNaN(c) && !isNaN(s) && s > 0) {
+                                                                                     totalMargin += ((s - c) / s) * 100;
+                                                                                     count++;
+                                                                                 }
+                                                                             });
+                                                                             return count > 0 ? `${(totalMargin / count).toFixed(0)}% avg margin` : '';
+                                                                         })()}
+                                                                     </span>
+                                                                 )}
+                                                             </div>
+                                                         ) : (
+                                                             <div className="flex flex-col gap-0.5">
+                                                                 <span className="text-slate-200 block font-semibold">${p.selling_price}</span>
+                                                                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                                                     <span>Cost: ${p.cost_price}</span>
+                                                                     {p.selling_price > 0 && (
+                                                                         <>
+                                                                             <span>&bull;</span>
+                                                                             <span className="text-indigo-400 font-semibold">{((p.selling_price - p.cost_price) / p.selling_price * 100).toFixed(0)}% margin</span>
+                                                                         </>
+                                                                     )}
+                                                                 </div>
+                                                             </div>
+                                                         )}
                                                     </td>
                                                     <td className="p-4">
                                                         <button 

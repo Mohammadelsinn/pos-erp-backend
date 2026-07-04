@@ -11,7 +11,8 @@ export default function CompanyProfile() {
         company_name: '',
         company_email: '',
         company_phone: '',
-        company_address: ''
+        company_address: '',
+        company_logo: ''
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -27,7 +28,8 @@ export default function CompanyProfile() {
                 company_name: response.data.company_name || '',
                 company_email: response.data.company_email || '',
                 company_phone: response.data.company_phone || '',
-                company_address: response.data.company_address || ''
+                company_address: response.data.company_address || '',
+                company_logo: response.data.company_logo || ''
             });
         } catch (err) {
             console.warn('API error fetching settings, loading fallback values.', err);
@@ -36,7 +38,8 @@ export default function CompanyProfile() {
                 company_name: 'Enterprise Store Ltd',
                 company_email: 'office@example.com',
                 company_phone: '+1 (555) 019-2831',
-                company_address: '100 Innovation Way, Suite 400, Tech District'
+                company_address: '100 Innovation Way, Suite 400, Tech District',
+                company_logo: ''
             });
         } finally {
             setIsLoading(false);
@@ -57,6 +60,27 @@ export default function CompanyProfile() {
         }));
     };
 
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await axios.post('/api/products/upload-image', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setSettings(prev => ({
+                ...prev,
+                company_logo: response.data.url
+            }));
+        } catch (err) {
+            console.error('Logo upload failed', err);
+            alert('Failed to upload logo image.');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
@@ -75,13 +99,16 @@ export default function CompanyProfile() {
                 company_name: response.data.company_name || '',
                 company_email: response.data.company_email || '',
                 company_phone: response.data.company_phone || '',
-                company_address: response.data.company_address || ''
+                company_address: response.data.company_address || '',
+                company_logo: response.data.company_logo || ''
             });
             setSuccessMessage('Company profile updated successfully.');
+            window.dispatchEvent(new Event('company-settings-updated'));
             setTimeout(() => setSuccessMessage(''), 4000);
         } catch (err) {
             console.warn('API error saving settings, performing local fallback update.', err);
             setSuccessMessage('Profile saved successfully (simulated fallback).');
+            window.dispatchEvent(new Event('company-settings-updated'));
             setTimeout(() => setSuccessMessage(''), 4000);
         } finally {
             setIsSaving(false);
@@ -139,6 +166,45 @@ export default function CompanyProfile() {
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-5">
+                            {/* Company Logo Upload */}
+                            <div className="bg-slate-950/20 border border-slate-850 p-4 rounded-xl space-y-3">
+                                <label className="block text-xs font-semibold text-slate-400">Company Logo</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 border border-slate-800 bg-slate-950/40 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+                                        {settings.company_logo ? (
+                                            <img src={settings.company_logo} alt="Company Logo" className="w-full h-full object-contain" />
+                                        ) : (
+                                            <Store className="w-6 h-6 text-slate-705" />
+                                        )}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="flex gap-2">
+                                            <label className="px-3 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-750 text-slate-300 hover:text-slate-205 text-[11px] font-semibold rounded-lg cursor-pointer transition-all">
+                                                Browse Logo File
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    onChange={handleLogoUpload} 
+                                                    className="hidden" 
+                                                />
+                                            </label>
+                                            {settings.company_logo && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSettings(prev => ({ ...prev, company_logo: '' }))}
+                                                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-455 text-[11px] border border-rose-500/25 rounded-lg transition-colors"
+                                                >
+                                                    Remove Logo
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 leading-normal">
+                                            Recommended: square logo, max 1MB. Format: JPEG, PNG, WEBP.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <Input
                                     label="Registered Company Name"
@@ -222,6 +288,11 @@ export default function CompanyProfile() {
                             {/* Receipt Content */}
                             <div className="pt-2 space-y-4">
                                 <div className="text-center space-y-1">
+                                    {settings.company_logo && (
+                                        <div className="w-12 h-12 mx-auto mb-2 border border-slate-800 bg-slate-950/40 rounded-lg flex items-center justify-center overflow-hidden">
+                                            <img src={settings.company_logo} alt="Receipt Logo" className="w-full h-full object-contain" />
+                                        </div>
+                                    )}
                                     <h4 className="text-sm font-black text-slate-200 uppercase tracking-wide truncate max-w-[240px] mx-auto">
                                         {settings.company_name || 'Your Company Name'}
                                     </h4>
