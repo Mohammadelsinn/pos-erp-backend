@@ -53,6 +53,14 @@ class ProductController extends Controller
             });
         }
 
+        // Price range filter
+        if ($request->filled('min_price')) {
+            $query->where('selling_price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('selling_price', '<=', $request->max_price);
+        }
+
         // Sorting
         $sortField = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_dir', 'desc');
@@ -84,20 +92,22 @@ class ProductController extends Controller
             
             // Base product properties (if not using variations)
             'cost_price' => 'required_without:variations|nullable|numeric|min:0',
-            'selling_price' => 'required_without:variations|nullable|numeric|min:0',
+            'selling_price' => 'required_without:variations|nullable|numeric|min:0.01',
             'tax' => 'nullable|numeric|min:0|max:100',
             'sku' => 'nullable|string|max:255|unique:products,sku',
             'barcode' => 'nullable|string|max:255|unique:products,barcode',
-            
+
             // Variations array
             'variations' => 'required_if:has_variations,true|array',
+            'variations.*.name' => 'nullable|string|max:255',
             'variations.*.size' => 'nullable|string|max:255',
             'variations.*.color' => 'nullable|string|max:255',
             'variations.*.material' => 'nullable|string|max:255',
             'variations.*.sku' => 'required_if:has_variations,true|string|max:255|unique:product_variations,sku',
             'variations.*.barcode' => 'nullable|string|max:255',
             'variations.*.cost_price' => 'required_if:has_variations,true|numeric|min:0',
-            'variations.*.selling_price' => 'required_if:has_variations,true|numeric|min:0',
+            'variations.*.selling_price' => 'required_if:has_variations,true|numeric|min:0.01',
+            'variations.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if (empty($validated['slug'])) {
@@ -115,6 +125,8 @@ class ProductController extends Controller
             $variationsData = $validated['variations'] ?? [];
             unset($validated['variations']);
 
+            $warnings = $this->collectPriceWarnings($validated, $variationsData);
+
             $product = Product::create($validated);
 
             if ($product->has_variations) {
@@ -125,7 +137,7 @@ class ProductController extends Controller
 
             DB::commit();
             $product->load(['category', 'brand', 'variations']);
-            return response()->json($product, 201);
+            return response()->json(array_merge($product->toArray(), ['warnings' => $warnings]), 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Failed to create product: ' . $e->getMessage()], 500);
@@ -152,21 +164,23 @@ class ProductController extends Controller
             
             // Base product properties (if not using variations)
             'cost_price' => 'required_without:variations|nullable|numeric|min:0',
-            'selling_price' => 'required_without:variations|nullable|numeric|min:0',
+            'selling_price' => 'required_without:variations|nullable|numeric|min:0.01',
             'tax' => 'nullable|numeric|min:0|max:100',
             'sku' => 'nullable|string|max:255|unique:products,sku,' . $product->id,
             'barcode' => 'nullable|string|max:255|unique:products,barcode,' . $product->id,
-            
+
             // Variations array
             'variations' => 'required_if:has_variations,true|array',
             'variations.*.id' => 'nullable|integer|exists:product_variations,id',
+            'variations.*.name' => 'nullable|string|max:255',
             'variations.*.size' => 'nullable|string|max:255',
             'variations.*.color' => 'nullable|string|max:255',
             'variations.*.material' => 'nullable|string|max:255',
             'variations.*.sku' => 'required_if:has_variations,true|string|max:255',
             'variations.*.barcode' => 'nullable|string|max:255',
             'variations.*.cost_price' => 'required_if:has_variations,true|numeric|min:0',
-            'variations.*.selling_price' => 'required_if:has_variations,true|numeric|min:0',
+            'variations.*.selling_price' => 'required_if:has_variations,true|numeric|min:0.01',
+            'variations.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if (empty($validated['slug'])) {
@@ -201,6 +215,8 @@ class ProductController extends Controller
             $variationsData = $validated['variations'] ?? [];
             unset($validated['variations']);
 
+            $warnings = $this->collectPriceWarnings($validated, $variationsData);
+
             $product->update($validated);
 
             if ($product->has_variations) {
@@ -225,7 +241,7 @@ class ProductController extends Controller
 
             DB::commit();
             $product->load(['category', 'brand', 'variations']);
-            return response()->json($product);
+            return response()->json(array_merge($product->toArray(), ['warnings' => $warnings]));
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Failed to update product: ' . $e->getMessage()], 500);
@@ -242,6 +258,15 @@ class ProductController extends Controller
     {
         $product->status = $product->status === 'active' ? 'inactive' : 'active';
         $product->save();
+
+        // Deactivating a product deactivates all its variations too.
+        // Reactivating the product leaves variation status untouched.
+        if ($product->status === 'inactive') {
+            $product->variations()->update(['is_active' => false]);
+        }
+
+        $product->load(['category', 'brand', 'variations']);
+
         return response()->json($product);
     }
 
@@ -268,6 +293,24 @@ class ProductController extends Controller
         Product::whereIn('id', $request->ids)->update(['status' => $request->status]);
 
         return response()->json(['message' => 'Selected products status updated successfully']);
+    }
+
+    private function collectPriceWarnings(array $base, array $variations): array
+    {
+        $warnings = [];
+
+        if (isset($base['cost_price'], $base['selling_price']) && $base['selling_price'] < $base['cost_price']) {
+            $warnings[] = "Selling price ({$base['selling_price']}) is lower than cost price ({$base['cost_price']}).";
+        }
+
+        foreach ($variations as $index => $var) {
+            if (isset($var['cost_price'], $var['selling_price']) && $var['selling_price'] < $var['cost_price']) {
+                $label = $var['name'] ?? $var['sku'] ?? "#{$index}";
+                $warnings[] = "Variation \"{$label}\": selling price ({$var['selling_price']}) is lower than cost price ({$var['cost_price']}).";
+            }
+        }
+
+        return $warnings;
     }
 
     public function uploadImage(Request $request)

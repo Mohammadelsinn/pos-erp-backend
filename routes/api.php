@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImageController;
+use App\Http\Controllers\ProductVariationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
@@ -69,6 +70,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('products/{product}/images', [ProductImageController::class, 'store']);
         Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
         Route::patch('products/{product}/images/{image}/set-primary', [ProductImageController::class, 'setPrimary']);
+
+        // Product Variations routes
+        Route::get('products/{product}/variations', [ProductVariationController::class, 'index']);
+        Route::post('products/{product}/variations', [ProductVariationController::class, 'store']);
+        Route::get('products/{product}/variations/{variation}', [ProductVariationController::class, 'show']);
+        Route::put('products/{product}/variations/{variation}', [ProductVariationController::class, 'update']);
+        Route::delete('products/{product}/variations/{variation}', [ProductVariationController::class, 'destroy']);
+        Route::patch('products/{product}/variations/{variation}/toggle-status', [ProductVariationController::class, 'toggleStatus']);
     });
 
     // Inventory management — requires manage_inventory permission

@@ -33,7 +33,7 @@ class Product extends Model
         'tax' => 'decimal:2',
     ];
 
-    protected $appends = ['profit_margin', 'image_url'];
+    protected $appends = ['profit_margin', 'tax_amount', 'price_after_tax', 'image_url'];
 
     public function category()
     {
@@ -66,6 +66,16 @@ class Product extends Model
             return round((($this->selling_price - $this->cost_price) / $this->selling_price) * 100, 2);
         }
         return 0;
+    }
+
+    public function getTaxAmountAttribute()
+    {
+        return round($this->selling_price * ($this->tax / 100), 2);
+    }
+
+    public function getPriceAfterTaxAttribute()
+    {
+        return round($this->selling_price + $this->tax_amount, 2);
     }
 
     public function getImageUrlAttribute()
