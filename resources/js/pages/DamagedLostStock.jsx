@@ -5,6 +5,7 @@ import PageWrapper from '../components/PageWrapper';
 import Button from '../components/Button';
 import { Select, Input, Textarea } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
+import StockStatusBadge from '../components/StockStatusBadge';
 
 export default function DamagedLostStock() {
     // Dropdown list states
@@ -384,27 +385,11 @@ export default function DamagedLostStock() {
                             </div>
                         ) : currentInventory ? (
                             <div className="space-y-4">
-                                <div className="p-5 rounded-xl bg-slate-950/60 border border-slate-800/50 flex flex-col items-center justify-center text-center">
-                                    <span className="text-xs font-semibold text-slate-500 mb-1">Available Quantity</span>
-                                    <span className={`text-4xl font-extrabold tracking-tight ${
-                                        currentInventory.quantity <= 0 
-                                            ? 'text-rose-500' 
-                                            : currentInventory.quantity <= currentInventory.min_stock_level 
-                                                ? 'text-amber-500' 
-                                                : 'text-emerald-450'
-                                    }`}>
-                                        {currentInventory.quantity}
-                                    </span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mt-3 ${
-                                        currentInventory.quantity <= 0 
-                                            ? 'bg-rose-500/10 text-rose-450' 
-                                            : currentInventory.quantity <= currentInventory.min_stock_level 
-                                                ? 'bg-amber-500/10 text-amber-400' 
-                                                : 'bg-emerald-500/10 text-emerald-400'
-                                    }`}>
-                                        {currentInventory.quantity <= 0 ? 'Cannot Report (0 Stock)' : 'Units Available'}
-                                    </span>
-                                </div>
+                                <StockStatusBadge 
+                                    quantity={currentInventory.quantity} 
+                                    minStockLevel={currentInventory.min_stock_level} 
+                                    variant="card"
+                                />
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs font-medium py-1.5 border-b border-slate-850">
