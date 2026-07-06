@@ -83,8 +83,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Inventory management — requires manage_inventory permission
     Route::middleware('permission:manage_inventory')->group(function () {
         Route::get('inventory', [InventoryController::class, 'index']);
+        Route::get('inventory/low-stock', [InventoryController::class, 'lowStock']);
         Route::get('inventory/history', [InventoryController::class, 'allHistory']);
         Route::post('inventory/adjust', [InventoryController::class, 'adjust']);
         Route::get('inventory/{inventory}/history', [InventoryController::class, 'history']);
+        Route::get('inventory/{inventory}', [InventoryController::class, 'show']);
     });
 });

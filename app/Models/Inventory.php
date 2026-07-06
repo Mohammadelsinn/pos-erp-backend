@@ -55,4 +55,9 @@ class Inventory extends Model
         }
         return 'in_stock';
     }
+
+    public function isLowStock(): bool
+    {
+        return $this->quantity <= $this->min_stock_level;
+    }
 }

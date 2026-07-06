@@ -59,6 +59,29 @@ class InventoryController extends Controller
         return response()->json($query->paginate($perPage));
     }
 
+    public function show(Inventory $inventory)
+    {
+        $inventory->load(['product.category', 'product.brand', 'variation', 'branch']);
+        return response()->json($inventory);
+    }
+
+    public function lowStock(Request $request)
+    {
+        $query = Inventory::with(['product.category', 'product.brand', 'variation', 'branch'])
+            ->whereColumn('quantity', '<=', 'min_stock_level');
+
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+
+        $perPage = $request->get('per_page', 10);
+        return response()->json($query->orderBy('quantity')->paginate($perPage));
+    }
+
     public function adjust(Request $request)
     {
         $validated = $request->validate([
@@ -66,7 +89,7 @@ class InventoryController extends Controller
             'branch_id' => 'required_without:inventory_id|nullable|integer|exists:branches,id',
             'product_id' => 'required_without:inventory_id|nullable|integer|exists:products,id',
             'product_variation_id' => 'nullable|integer|exists:product_variations,id',
-            'type' => 'required|string|in:increment,decrement,set',
+            'type' => 'required|string|in:increment,decrement,set,in,out,adjustment,damaged,lost',
             'quantity' => 'required|integer|min:1',
             'reason' => 'nullable|string|max:255',
         ]);
@@ -88,13 +111,13 @@ class InventoryController extends Controller
             $oldQty = $inventory->quantity;
             $delta = $validated['quantity'];
 
-            if ($validated['type'] === 'increment') {
+            if (in_array($validated['type'], ['increment', 'in'])) {
                 $inventory->quantity += $delta;
-            } elseif ($validated['type'] === 'decrement') {
+            } elseif (in_array($validated['type'], ['decrement', 'out', 'damaged', 'lost'])) {
                 $inventory->quantity = max(0, $inventory->quantity - $delta);
                 // Delta adjusted for logs in case decrement exceeds stock
                 $delta = $oldQty - $inventory->quantity;
-            } else { // set
+            } else { // set, adjustment
                 $inventory->quantity = $delta;
                 $delta = $inventory->quantity - $oldQty;
             }
@@ -104,10 +127,14 @@ class InventoryController extends Controller
             // Create adjustment audit log
             InventoryAdjustment::create([
                 'inventory_id' => $inventory->id,
+                'product_id' => $inventory->product_id,
+                'product_variation_id' => $inventory->product_variation_id,
+                'branch_id' => $inventory->branch_id,
                 'user_id' => Auth::id(),
                 'type' => $validated['type'],
                 'quantity' => $delta,
                 'reason' => $validated['reason'] ?: 'Manual Stock Adjustment',
+                'notes' => $validated['reason'] ?: null,
             ]);
 
             DB::commit();
