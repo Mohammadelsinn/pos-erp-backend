@@ -27,6 +27,8 @@ export default function Inventory() {
     const [inventoryItems, setInventoryItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState('');
     
     // Pagination & Filter States
     const [search, setSearch] = useState('');
@@ -71,6 +73,7 @@ export default function Inventory() {
                 per_page: perPage,
                 search,
                 branch_id: selectedBranch,
+                product_id: selectedProduct,
                 status: selectedStatus
             };
             const response = await axios.get('/api/inventory', { params });
@@ -81,7 +84,7 @@ export default function Inventory() {
             // Compute summary metrics (simplified counts based on current response or separate fetches)
             // For a highly robust metric display, we fetch summary counts
             const summaryRes = await axios.get('/api/inventory', { 
-                params: { branch_id: selectedBranch, per_page: 1000 } 
+                params: { branch_id: selectedBranch, product_id: selectedProduct, per_page: 1000 } 
             });
             const allItems = summaryRes.data.data || [];
             const low = allItems.filter(item => item.quantity > 0 && item.quantity <= item.min_stock_level).length;
@@ -98,7 +101,7 @@ export default function Inventory() {
             setLoading(false);
         }
     };
-
+    
     // Fetch Branches List
     const fetchBranches = async () => {
         try {
@@ -109,14 +112,25 @@ export default function Inventory() {
         }
     };
 
+    // Fetch Products List
+    const fetchProducts = async () => {
+        try {
+            const response = await axios.get('/api/products?per_page=1000');
+            setProducts(response.data.data || response.data || []);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
+
     // Trigger Initial Load & Refetches on Filters Change
     useEffect(() => {
         fetchBranches();
+        fetchProducts();
     }, []);
 
     useEffect(() => {
         fetchInventory();
-    }, [page, perPage, selectedBranch, selectedStatus]);
+    }, [page, perPage, selectedBranch, selectedProduct, selectedStatus]);
 
     // Handle Quick Filter Change
     const handleSearchSubmit = (e) => {
@@ -128,6 +142,7 @@ export default function Inventory() {
     const handleResetFilters = () => {
         setSearch('');
         setSelectedBranch('');
+        setSelectedProduct('');
         setSelectedStatus('');
         setPage(1);
     };
@@ -354,6 +369,12 @@ export default function Inventory() {
         ...branches.map(b => ({ value: b.id, label: b.name }))
     ];
 
+    // Product options formatting
+    const productOptions = [
+        { value: '', label: 'All Products' },
+        ...products.map(p => ({ value: p.id, label: p.name }))
+    ];
+
     return (
         <PageWrapper title="Inventory Stock Control">
             
@@ -437,6 +458,19 @@ export default function Inventory() {
                                 setPage(1);
                             }}
                             options={branchOptions}
+                        />
+                    </div>
+
+                    <div className="w-full md:w-56">
+                        <Select
+                            label="Filter By Product"
+                            id="product-select"
+                            value={selectedProduct}
+                            onChange={(e) => {
+                                setSelectedProduct(e.target.value);
+                                setPage(1);
+                            }}
+                            options={productOptions}
                         />
                     </div>
 

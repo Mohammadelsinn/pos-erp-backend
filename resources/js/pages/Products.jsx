@@ -15,7 +15,7 @@ export default function Products() {
     // Products State
     const [products, setProducts] = useState([]);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
-    const [filters, setFilters] = useState({ search: '', category_id: '', brand_id: '', status: '', page: 1, per_page: 10 });
+    const [filters, setFilters] = useState({ search: '', category_id: '', brand_id: '', branch_id: '', status: '', page: 1, per_page: 10 });
     const [selectedIds, setSelectedIds] = useState([]);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
     const [bulkAction, setBulkAction] = useState('');
@@ -24,6 +24,7 @@ export default function Products() {
     // General Catalog States
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [loadingCatalog, setLoadingCatalog] = useState(false);
 
     // Forms State for Categories/Brands
@@ -41,17 +42,19 @@ export default function Products() {
         if (activeTab === 'products') {
             fetchProducts();
         }
-    }, [filters.page, filters.category_id, filters.brand_id, filters.status]);
+    }, [filters.page, filters.category_id, filters.brand_id, filters.branch_id, filters.status]);
 
     const fetchCatalogData = async () => {
         setLoadingCatalog(true);
         try {
-            const [catRes, brandRes] = await Promise.all([
+            const [catRes, brandRes, branchRes] = await Promise.all([
                 axios.get('/api/categories'),
-                axios.get('/api/brands')
+                axios.get('/api/brands'),
+                axios.get('/api/branches')
             ]);
             setCategories(catRes.data);
             setBrands(brandRes.data);
+            setBranches(branchRes.data.data || branchRes.data || []);
         } catch (err) {
             console.error('Failed to fetch catalog lists', err);
         } finally {
@@ -66,6 +69,7 @@ export default function Products() {
                 search: filters.search,
                 category_id: filters.category_id,
                 brand_id: filters.brand_id,
+                branch_id: filters.branch_id,
                 status: filters.status,
                 page: filters.page,
                 per_page: filters.per_page
@@ -91,7 +95,7 @@ export default function Products() {
     };
 
     const handleResetFilters = () => {
-        setFilters({ search: '', category_id: '', brand_id: '', status: '', page: 1, per_page: 10 });
+        setFilters({ search: '', category_id: '', brand_id: '', branch_id: '', status: '', page: 1, per_page: 10 });
         setSelectedIds([]);
     };
 
@@ -295,7 +299,7 @@ export default function Products() {
                                     className="w-full pl-10 pr-4 py-2 text-xs bg-slate-950/40 border border-slate-800 rounded-lg text-slate-250 placeholder-slate-500 focus:outline-none focus:border-indigo-500/80 transition-colors"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:w-auto">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:w-auto">
                                 <select
                                     value={filters.category_id}
                                     onChange={(e) => setFilters(prev => ({ ...prev, category_id: e.target.value, page: 1 }))}
@@ -320,6 +324,14 @@ export default function Products() {
                                     <option value="" className="bg-slate-900">All Statuses</option>
                                     <option value="active" className="bg-slate-900">Active</option>
                                     <option value="inactive" className="bg-slate-900">Inactive</option>
+                                </select>
+                                <select
+                                    value={filters.branch_id}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, branch_id: e.target.value, page: 1 }))}
+                                    className="px-3 py-2 text-xs bg-slate-950/40 border border-slate-800 rounded-lg text-slate-350 focus:outline-none focus:border-indigo-500"
+                                >
+                                    <option value="" className="bg-slate-900">All Branches</option>
+                                    {branches.map(b => <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>)}
                                 </select>
                                 <div className="flex gap-1.5 col-span-2 sm:col-span-1">
                                     <button
