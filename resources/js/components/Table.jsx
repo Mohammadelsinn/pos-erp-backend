@@ -62,7 +62,11 @@ export default function Table({
                                     <tr key={rowIdx} className="hover:bg-slate-950/20 transition-colors">
                                         {columns.map((col) => (
                                             <td key={col.key} className={`py-4 px-4 ${col.className || ''}`}>
-                                                {col.render ? col.render(row, rowIdx) : row[col.key]}
+                                                {col.render 
+                                                    ? (col.accessor 
+                                                        ? col.render(row[col.accessor], row, rowIdx) 
+                                                        : col.render(row, rowIdx)) 
+                                                    : row[col.key || col.accessor]}
                                             </td>
                                         ))}
                                     </tr>
