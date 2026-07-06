@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, ShieldAlert, BadgeCheck, ReceiptEuro, Scale, Barcode, Tag, RefreshCw } from 'lucide-react';
+import StockStatusBadge from './StockStatusBadge';
 
 export default function ProductQuickView({ product, onClose }) {
     if (!product) return null;
@@ -198,27 +199,6 @@ export default function ProductQuickView({ product, onClose }) {
                                                         // Calculate stock for this variation
                                                         const varInventories = fullProduct.inventories ? fullProduct.inventories.filter(inv => inv.product_variation_id === v.id) : [];
                                                         const varTotalStock = varInventories.reduce((sum, inv) => sum + (inv.quantity || 0), 0);
-                                                        const hasVarInventories = varInventories.length > 0;
-                                                        
-                                                        let stockBadge = '';
-                                                        let stockText = '';
-                                                        
-                                                        if (!hasVarInventories) {
-                                                            stockBadge = 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
-                                                            stockText = 'No Stock';
-                                                        } else if (varTotalStock <= 0) {
-                                                            stockBadge = 'bg-rose-500/10 text-rose-455 border border-rose-500/20';
-                                                            stockText = 'Out of Stock';
-                                                        } else {
-                                                            const isLow = varInventories.some(inv => inv.quantity <= inv.min_stock_level);
-                                                            if (isLow) {
-                                                                stockBadge = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse';
-                                                                stockText = `${varTotalStock} units (Low)`;
-                                                            } else {
-                                                                stockBadge = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-                                                                stockText = `${varTotalStock} units`;
-                                                            }
-                                                        }
                                                         
                                                         const varBranchBreakdown = varInventories.map(inv => `${inv.branch?.name || 'Branch'}: ${inv.quantity}`).join('\n');
                                                         
@@ -232,9 +212,12 @@ export default function ProductQuickView({ product, onClose }) {
                                                                 <td className="p-3 text-indigo-300 font-semibold">{varMargin}%</td>
                                                                 <td className="p-3">
                                                                     <div className="flex flex-col gap-0.5">
-                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider w-max ${stockBadge}`} title={varBranchBreakdown}>
-                                                                            {stockText}
-                                                                        </span>
+                                                                        <StockStatusBadge 
+                                                                            quantity={varTotalStock}
+                                                                            minStockLevel={varInventories?.[0]?.min_stock_level || 5}
+                                                                            inventories={varInventories}
+                                                                            size="sm"
+                                                                        />
                                                                         {varInventories.length > 0 && (
                                                                             <span className="text-[9px] text-slate-500 max-w-[120px] truncate" title={varBranchBreakdown}>
                                                                                 {varInventories.map(inv => `${inv.branch?.name?.split(' ')[0] || 'Branch'}: ${inv.quantity}`).join(' | ')}

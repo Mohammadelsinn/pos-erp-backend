@@ -6,6 +6,7 @@ import {
     CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Layers
 } from 'lucide-react';
 import ProductQuickView from '../components/ProductQuickView';
+import StockStatusBadge from '../components/StockStatusBadge';
 
 export default function Products() {
     const navigate = useNavigate();
@@ -485,37 +486,18 @@ export default function Products() {
                                                     <td className="p-4">
                                                         {(() => {
                                                             const totalStock = p.inventories ? p.inventories.reduce((sum, inv) => sum + (inv.quantity || 0), 0) : 0;
-                                                            const hasInventories = p.inventories && p.inventories.length > 0;
-                                                            
-                                                            let stockBadge = '';
-                                                            let stockText = '';
-                                                            
-                                                            if (!hasInventories) {
-                                                                stockBadge = 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
-                                                                stockText = 'No Stock Tracked';
-                                                            } else if (totalStock <= 0) {
-                                                                stockBadge = 'bg-rose-500/10 text-rose-455 border border-rose-500/20';
-                                                                stockText = 'Out of Stock';
-                                                            } else {
-                                                                const isLow = p.inventories.some(inv => inv.quantity <= inv.min_stock_level);
-                                                                if (isLow) {
-                                                                    stockBadge = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse';
-                                                                    stockText = `${totalStock} units (Low)`;
-                                                                } else {
-                                                                    stockBadge = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-                                                                    stockText = `${totalStock} units`;
-                                                                }
-                                                            }
-                                                            
                                                             const branchBreakdown = p.inventories && p.inventories.length > 0
                                                                 ? p.inventories.map(inv => `${inv.branch?.name || 'Branch'}: ${inv.quantity}`).join(' | ')
                                                                 : '';
                                                                 
                                                             return (
                                                                 <div className="flex flex-col gap-1">
-                                                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider w-max ${stockBadge}`}>
-                                                                        {stockText}
-                                                                    </span>
+                                                                    <StockStatusBadge 
+                                                                        quantity={totalStock} 
+                                                                        minStockLevel={p.inventories?.[0]?.min_stock_level || 5}
+                                                                        inventories={p.inventories}
+                                                                        size="sm"
+                                                                    />
                                                                     {branchBreakdown && (
                                                                         <span className="text-[10px] text-slate-500 truncate max-w-[150px]" title={branchBreakdown}>
                                                                             {branchBreakdown}
