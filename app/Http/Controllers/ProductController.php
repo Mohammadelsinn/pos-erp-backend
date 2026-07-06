@@ -14,7 +14,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'brand', 'variations']);
+        $query = Product::with(['category', 'brand', 'variations', 'inventories.branch']);
 
         // Search
         if ($request->has('search') && !empty($request->search)) {
@@ -136,7 +136,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
-            $product->load(['category', 'brand', 'variations']);
+            $product->load(['category', 'brand', 'variations', 'inventories.branch']);
             return response()->json(array_merge($product->toArray(), ['warnings' => $warnings]), 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -146,7 +146,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load(['category', 'brand', 'variations']);
+        $product->load(['category', 'brand', 'variations', 'inventories.branch']);
         return response()->json($product);
     }
 
@@ -240,7 +240,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
-            $product->load(['category', 'brand', 'variations']);
+            $product->load(['category', 'brand', 'variations', 'inventories.branch']);
             return response()->json(array_merge($product->toArray(), ['warnings' => $warnings]));
         } catch (\Exception $e) {
             DB::rollBack();
@@ -265,7 +265,7 @@ class ProductController extends Controller
             $product->variations()->update(['is_active' => false]);
         }
 
-        $product->load(['category', 'brand', 'variations']);
+        $product->load(['category', 'brand', 'variations', 'inventories.branch']);
 
         return response()->json($product);
     }

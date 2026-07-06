@@ -122,18 +122,52 @@ export default function ProductQuickView({ product, onClose }) {
                                     )}
 
                                     {!fullProduct.has_variations && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                            <div className="flex items-center gap-2.5 text-xs text-slate-400 bg-slate-950/20 border border-slate-850 p-2.5 rounded-lg">
-                                                <Barcode className="w-4 h-4 text-slate-550" />
-                                                <span><strong>SKU:</strong> {fullProduct.sku || 'N/A'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2.5 text-xs text-slate-400 bg-slate-950/20 border border-slate-850 p-2.5 rounded-lg">
-                                                <Barcode className="w-4 h-4 text-slate-550" />
-                                                <span><strong>Barcode:</strong> {fullProduct.barcode || 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                             <div className="flex items-center gap-2.5 text-xs text-slate-400 bg-slate-950/20 border border-slate-850 p-2.5 rounded-lg">
+                                                 <Barcode className="w-4 h-4 text-slate-550" />
+                                                 <span><strong>SKU:</strong> {fullProduct.sku || 'N/A'}</span>
+                                             </div>
+                                             <div className="flex items-center gap-2.5 text-xs text-slate-400 bg-slate-950/20 border border-slate-850 p-2.5 rounded-lg">
+                                                 <Barcode className="w-4 h-4 text-slate-550" />
+                                                 <span><strong>Barcode:</strong> {fullProduct.barcode || 'N/A'}</span>
+                                             </div>
+                                         </div>
+                                     )}
+
+                                     {/* Stock Levels breakdown for Simple Product */}
+                                     {!fullProduct.has_variations && (
+                                         <div className="space-y-2 pt-2">
+                                             <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Branch Stock Breakdown</h4>
+                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                 {fullProduct.inventories && fullProduct.inventories.length > 0 ? (
+                                                     fullProduct.inventories.map(inv => {
+                                                         let badgeClass = 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/15';
+                                                         if (inv.quantity <= 0) {
+                                                             badgeClass = 'text-rose-400 bg-rose-500/5 border border-rose-500/15';
+                                                         } else if (inv.quantity <= inv.min_stock_level) {
+                                                             badgeClass = 'text-amber-400 bg-amber-500/5 border border-amber-500/15 animate-pulse';
+                                                         }
+                                                         return (
+                                                             <div key={inv.id} className="bg-slate-950/40 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
+                                                                 <div className="flex flex-col">
+                                                                     <span className="text-xs font-bold text-slate-350">{inv.branch?.name || 'Branch'}</span>
+                                                                     <span className="text-[10px] text-slate-500">Min Threshold: {inv.min_stock_level}</span>
+                                                                 </div>
+                                                                 <span className={`px-2 py-0.5 rounded-md text-xs font-bold font-mono ${badgeClass}`}>
+                                                                     {inv.quantity} units
+                                                                 </span>
+                                                             </div>
+                                                         );
+                                                     })
+                                                 ) : (
+                                                     <div className="col-span-2 text-center py-4 bg-slate-950/20 border border-slate-850 rounded-xl text-slate-550 text-xs">
+                                                         No stock tracked for this product yet.
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         </div>
+                                     )}
+                                 </div>
                             </div>
 
                             {/* Variations Section */}
@@ -151,6 +185,7 @@ export default function ProductQuickView({ product, onClose }) {
                                                         <th className="p-3">Cost</th>
                                                         <th className="p-3">Selling</th>
                                                         <th className="p-3">Margin</th>
+                                                        <th className="p-3">Stock Level</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-800/60 text-xs text-slate-350">
@@ -159,6 +194,34 @@ export default function ProductQuickView({ product, onClose }) {
                                                         const varMargin = v.selling_price > 0 
                                                             ? ((v.selling_price - v.cost_price) / v.selling_price * 100).toFixed(2)
                                                             : '0.00';
+                                                        
+                                                        // Calculate stock for this variation
+                                                        const varInventories = fullProduct.inventories ? fullProduct.inventories.filter(inv => inv.product_variation_id === v.id) : [];
+                                                        const varTotalStock = varInventories.reduce((sum, inv) => sum + (inv.quantity || 0), 0);
+                                                        const hasVarInventories = varInventories.length > 0;
+                                                        
+                                                        let stockBadge = '';
+                                                        let stockText = '';
+                                                        
+                                                        if (!hasVarInventories) {
+                                                            stockBadge = 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+                                                            stockText = 'No Stock';
+                                                        } else if (varTotalStock <= 0) {
+                                                            stockBadge = 'bg-rose-500/10 text-rose-455 border border-rose-500/20';
+                                                            stockText = 'Out of Stock';
+                                                        } else {
+                                                            const isLow = varInventories.some(inv => inv.quantity <= inv.min_stock_level);
+                                                            if (isLow) {
+                                                                stockBadge = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse';
+                                                                stockText = `${varTotalStock} units (Low)`;
+                                                            } else {
+                                                                stockBadge = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                                                                stockText = `${varTotalStock} units`;
+                                                            }
+                                                        }
+                                                        
+                                                        const varBranchBreakdown = varInventories.map(inv => `${inv.branch?.name || 'Branch'}: ${inv.quantity}`).join('\n');
+                                                        
                                                         return (
                                                             <tr key={v.id} className="hover:bg-slate-800/20">
                                                                 <td className="p-3 font-medium text-slate-200">{attrs || 'Default'}</td>
@@ -167,12 +230,24 @@ export default function ProductQuickView({ product, onClose }) {
                                                                 <td className="p-3">${v.cost_price}</td>
                                                                 <td className="p-3 text-slate-200">${v.selling_price}</td>
                                                                 <td className="p-3 text-indigo-300 font-semibold">{varMargin}%</td>
+                                                                <td className="p-3">
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider w-max ${stockBadge}`} title={varBranchBreakdown}>
+                                                                            {stockText}
+                                                                        </span>
+                                                                        {varInventories.length > 0 && (
+                                                                            <span className="text-[9px] text-slate-500 max-w-[120px] truncate" title={varBranchBreakdown}>
+                                                                                {varInventories.map(inv => `${inv.branch?.name?.split(' ')[0] || 'Branch'}: ${inv.quantity}`).join(' | ')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
                                                             </tr>
                                                         );
                                                     })}
                                                     {(!fullProduct.variations || fullProduct.variations.length === 0) && (
                                                         <tr>
-                                                            <td colSpan="6" className="p-4 text-center text-slate-500">No variations configured.</td>
+                                                            <td colSpan="7" className="p-4 text-center text-slate-500">No variations configured.</td>
                                                         </tr>
                                                     )}
                                                 </tbody>

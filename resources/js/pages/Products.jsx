@@ -386,6 +386,7 @@ export default function Products() {
                                         <th className="p-4">Brand</th>
                                         <th className="p-4">SKU / Code</th>
                                         <th className="p-4">Base Pricing</th>
+                                        <th className="p-4">Stock Level</th>
                                         <th className="p-4">Status</th>
                                         <th className="p-4 text-right">Actions</th>
                                     </tr>
@@ -393,14 +394,14 @@ export default function Products() {
                                 <tbody className="divide-y divide-slate-800/60 text-xs text-slate-350">
                                     {loadingProducts ? (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center text-slate-500">
+                                            <td colSpan="9" className="p-8 text-center text-slate-500">
                                                 <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-indigo-500" />
                                                 <span>Loading catalog products...</span>
                                             </td>
                                         </tr>
                                     ) : products.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center text-slate-500">
+                                            <td colSpan="9" className="p-8 text-center text-slate-500">
                                                 <AlertCircle className="w-8 h-8 mx-auto mb-2 text-slate-700" />
                                                 <span>No products found matching filters.</span>
                                             </td>
@@ -480,6 +481,49 @@ export default function Products() {
                                                                  </div>
                                                              </div>
                                                          )}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        {(() => {
+                                                            const totalStock = p.inventories ? p.inventories.reduce((sum, inv) => sum + (inv.quantity || 0), 0) : 0;
+                                                            const hasInventories = p.inventories && p.inventories.length > 0;
+                                                            
+                                                            let stockBadge = '';
+                                                            let stockText = '';
+                                                            
+                                                            if (!hasInventories) {
+                                                                stockBadge = 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+                                                                stockText = 'No Stock Tracked';
+                                                            } else if (totalStock <= 0) {
+                                                                stockBadge = 'bg-rose-500/10 text-rose-455 border border-rose-500/20';
+                                                                stockText = 'Out of Stock';
+                                                            } else {
+                                                                const isLow = p.inventories.some(inv => inv.quantity <= inv.min_stock_level);
+                                                                if (isLow) {
+                                                                    stockBadge = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse';
+                                                                    stockText = `${totalStock} units (Low)`;
+                                                                } else {
+                                                                    stockBadge = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                                                                    stockText = `${totalStock} units`;
+                                                                }
+                                                            }
+                                                            
+                                                            const branchBreakdown = p.inventories && p.inventories.length > 0
+                                                                ? p.inventories.map(inv => `${inv.branch?.name || 'Branch'}: ${inv.quantity}`).join(' | ')
+                                                                : '';
+                                                                
+                                                            return (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider w-max ${stockBadge}`}>
+                                                                        {stockText}
+                                                                    </span>
+                                                                    {branchBreakdown && (
+                                                                        <span className="text-[10px] text-slate-500 truncate max-w-[150px]" title={branchBreakdown}>
+                                                                            {branchBreakdown}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="p-4">
                                                         <button 
