@@ -85,8 +85,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('inventory', [InventoryController::class, 'index']);
         Route::get('inventory/low-stock', [InventoryController::class, 'lowStock']);
         Route::get('inventory/history', [InventoryController::class, 'allHistory']);
+        Route::get('stock-movements', [InventoryController::class, 'allHistory']);
         Route::post('inventory/adjust', [InventoryController::class, 'adjust']);
         Route::get('inventory/{inventory}/history', [InventoryController::class, 'history']);
+        Route::get('inventory/{inventory}/movements', [InventoryController::class, 'history']);
+        Route::post('inventory/{inventory}/adjust', [InventoryController::class, 'adjustById']);
+        Route::post('inventory/{inventory}/damaged', [InventoryController::class, 'markDamaged']);
+        Route::post('inventory/{inventory}/lost', [InventoryController::class, 'markLost']);
         Route::get('inventory/{inventory}', [InventoryController::class, 'show']);
     });
 });

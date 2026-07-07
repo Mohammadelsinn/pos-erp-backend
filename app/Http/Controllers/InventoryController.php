@@ -147,6 +147,72 @@ class InventoryController extends Controller
         }
     }
 
+    public function adjustById(Request $request, Inventory $inventory)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|not_in:0',
+            'type' => 'required|string|in:adjustment,damaged,lost',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        return $this->applyStockMovement($inventory, $validated['quantity'], $validated['type'], $validated['notes'] ?? null);
+    }
+
+    public function markDamaged(Request $request, Inventory $inventory)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        return $this->applyStockMovement($inventory, -$validated['quantity'], 'damaged', $validated['notes'] ?? null);
+    }
+
+    public function markLost(Request $request, Inventory $inventory)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        return $this->applyStockMovement($inventory, -$validated['quantity'], 'lost', $validated['notes'] ?? null);
+    }
+
+    private function applyStockMovement(Inventory $inventory, int $delta, string $type, ?string $notes)
+    {
+        $newQuantity = $inventory->quantity + $delta;
+
+        if ($newQuantity < 0) {
+            return response()->json(['message' => 'Cannot reduce stock below 0.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $inventory->quantity = $newQuantity;
+            $inventory->save();
+
+            InventoryAdjustment::create([
+                'inventory_id' => $inventory->id,
+                'product_id' => $inventory->product_id,
+                'product_variation_id' => $inventory->product_variation_id,
+                'branch_id' => $inventory->branch_id,
+                'user_id' => Auth::id(),
+                'type' => $type,
+                'quantity' => $delta,
+                'reason' => $notes ?: ucfirst($type) . ' stock movement',
+                'notes' => $notes,
+            ]);
+
+            DB::commit();
+
+            $inventory->load(['product.category', 'product.brand', 'variation', 'branch']);
+            return response()->json($inventory);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to apply stock movement: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function history(Inventory $inventory)
     {
         $history = InventoryAdjustment::where('inventory_id', $inventory->id)
@@ -154,7 +220,7 @@ class InventoryController extends Controller
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
-            
+
         return response()->json($history);
     }
 
@@ -181,6 +247,14 @@ class InventoryController extends Controller
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         if ($request->filled('search')) {
