@@ -10,8 +10,10 @@ use App\Http\Controllers\ProductVariationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -93,5 +95,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('inventory/{inventory}/damaged', [InventoryController::class, 'markDamaged']);
         Route::post('inventory/{inventory}/lost', [InventoryController::class, 'markLost']);
         Route::get('inventory/{inventory}', [InventoryController::class, 'show']);
+    });
+
+    // Supplier management — requires manage_suppliers permission
+    Route::middleware('permission:manage_suppliers')->group(function () {
+        Route::patch('suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus']);
+        Route::apiResource('suppliers', SupplierController::class);
+    });
+
+    // Purchase order management — requires manage_purchases permission
+    Route::middleware('permission:manage_purchases')->group(function () {
+        Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
+        Route::apiResource('purchase-orders', PurchaseOrderController::class);
     });
 });

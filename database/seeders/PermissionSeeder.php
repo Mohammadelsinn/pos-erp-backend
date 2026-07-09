@@ -18,6 +18,8 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_branches',     'display_name' => 'Manage Branches',     'description' => 'Create, update, and delete branches'],
             ['name' => 'manage_products',     'display_name' => 'Manage Catalog',      'description' => 'Manage products, categories, and brands'],
             ['name' => 'manage_inventory',    'display_name' => 'Manage Inventory',    'description' => 'Manage and adjust stock quantities'],
+            ['name' => 'manage_suppliers',    'display_name' => 'Manage Suppliers',    'description' => 'Create, update, and delete suppliers'],
+            ['name' => 'manage_purchases',    'display_name' => 'Manage Purchases',    'description' => 'Create, update, and manage purchase orders'],
         ];
 
         foreach ($permissions as $perm) {
