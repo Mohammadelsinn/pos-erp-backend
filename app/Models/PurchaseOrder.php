@@ -22,6 +22,13 @@ class PurchaseOrder extends Model
         'total_amount' => 'decimal:2',
     ];
 
+    protected $appends = ['status_label'];
+
+    public function getStatusLabelAttribute()
+    {
+        return ucwords(str_replace('_', ' ', $this->status));
+    }
+
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);

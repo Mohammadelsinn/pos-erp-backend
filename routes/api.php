@@ -106,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Purchase order management — requires manage_purchases permission
     Route::middleware('permission:manage_purchases')->group(function () {
         Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
+        Route::post('purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
     });
 });

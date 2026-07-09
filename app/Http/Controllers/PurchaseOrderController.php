@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inventory;
+use App\Models\InventoryAdjustment;
 use App\Models\PurchaseOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +12,15 @@ use Illuminate\Support\Facades\DB;
 class PurchaseOrderController extends Controller
 {
     private const STATUSES = ['draft', 'ordered', 'partially_received', 'received', 'cancelled'];
+
+    // Cancellation is allowed from any non-terminal state; otherwise the lifecycle only moves forward.
+    private const ALLOWED_TRANSITIONS = [
+        'draft' => ['ordered', 'cancelled'],
+        'ordered' => ['partially_received', 'received', 'cancelled'],
+        'partially_received' => ['received', 'cancelled'],
+        'received' => [],
+        'cancelled' => [],
+    ];
 
     public function index(Request $request)
     {
@@ -163,9 +174,112 @@ class PurchaseOrderController extends Controller
             'status' => 'required|string|in:' . implode(',', self::STATUSES),
         ]);
 
+        $allowed = self::ALLOWED_TRANSITIONS[$purchaseOrder->status] ?? [];
+        if (! in_array($validated['status'], $allowed)) {
+            return response()->json([
+                'message' => "Cannot transition purchase order from '{$purchaseOrder->status}' to '{$validated['status']}'.",
+            ], 422);
+        }
+
         $purchaseOrder->update(['status' => $validated['status']]);
         $purchaseOrder->load(['supplier', 'user', 'items.product', 'items.variation']);
 
         return response()->json($purchaseOrder);
+    }
+
+    public function receive(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+            'items' => 'required|array|min:1',
+            'items.*.purchase_order_item_id' => 'required|integer|exists:purchase_order_items,id',
+            'items.*.quantity_received' => 'required|integer|min:1',
+        ]);
+
+        if ($purchaseOrder->status === 'draft') {
+            return response()->json(['message' => 'Purchase order must be ordered before receiving stock.'], 422);
+        }
+
+        if (in_array($purchaseOrder->status, ['received', 'cancelled'])) {
+            return response()->json(['message' => "Cannot receive stock for a purchase order with status '{$purchaseOrder->status}'."], 422);
+        }
+
+        // Resolve and validate each line against its remaining quantity before writing anything
+        $receipts = [];
+        $errors = [];
+        foreach ($validated['items'] as $itemData) {
+            $item = $purchaseOrder->items()->find($itemData['purchase_order_item_id']);
+
+            if (! $item) {
+                $errors[] = "Item #{$itemData['purchase_order_item_id']} does not belong to this purchase order.";
+                continue;
+            }
+
+            $remaining = $item->quantity_ordered - $item->quantity_received;
+            $qty = $itemData['quantity_received'];
+
+            if ($qty > $remaining) {
+                $errors[] = "Cannot receive {$qty} units for item #{$item->id}; only {$remaining} remaining.";
+                continue;
+            }
+
+            $receipts[] = ['item' => $item, 'qty' => $qty];
+        }
+
+        if (! empty($errors)) {
+            return response()->json(['message' => 'Invalid receive quantities.', 'errors' => $errors], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($receipts as $receipt) {
+                $item = $receipt['item'];
+                $qty = $receipt['qty'];
+
+                $item->quantity_received += $qty;
+                $item->save();
+
+                $inventory = Inventory::firstOrCreate([
+                    'branch_id' => $validated['branch_id'],
+                    'product_id' => $item->product_id,
+                    'product_variation_id' => $item->product_variation_id,
+                ], [
+                    'quantity' => 0,
+                    'min_stock_level' => 5,
+                ]);
+
+                $inventory->quantity += $qty;
+                $inventory->save();
+
+                InventoryAdjustment::create([
+                    'inventory_id' => $inventory->id,
+                    'product_id' => $inventory->product_id,
+                    'product_variation_id' => $inventory->product_variation_id,
+                    'branch_id' => $inventory->branch_id,
+                    'user_id' => Auth::id(),
+                    'type' => 'in',
+                    'quantity' => $qty,
+                    'reason' => 'Purchase order receipt',
+                    'reference_type' => PurchaseOrder::class,
+                    'reference_id' => $purchaseOrder->id,
+                    'notes' => "Received against PO #{$purchaseOrder->id}",
+                ]);
+            }
+
+            $purchaseOrder->load('items');
+            $allReceived = $purchaseOrder->items->every(fn ($i) => $i->quantity_received >= $i->quantity_ordered);
+            $anyReceived = $purchaseOrder->items->sum('quantity_received') > 0;
+
+            $purchaseOrder->status = $allReceived ? 'received' : ($anyReceived ? 'partially_received' : $purchaseOrder->status);
+            $purchaseOrder->save();
+
+            DB::commit();
+
+            $purchaseOrder->load(['supplier', 'user', 'items.product', 'items.variation']);
+            return response()->json($purchaseOrder);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to receive stock: ' . $e->getMessage()], 500);
+        }
     }
 }
