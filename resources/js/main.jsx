@@ -18,6 +18,8 @@ import Inventory from './pages/Inventory';
 import StockAdjustment from './pages/StockAdjustment';
 import DamagedLostStock from './pages/DamagedLostStock';
 import StockMovementHistory from './pages/StockMovementHistory';
+import Suppliers from './pages/Suppliers';
+import PurchaseOrders from './pages/PurchaseOrders';
 
 function App() {
     return (
@@ -44,8 +46,8 @@ function App() {
                         <Route path="inventory/adjust" element={<StockAdjustment />} />
                         <Route path="inventory/damaged-lost" element={<DamagedLostStock />} />
                         <Route path="inventory/movement-history" element={<StockMovementHistory />} />
-                        <Route path="purchases" element={<PlaceholderPage title="Purchases" />} />
-                        <Route path="suppliers" element={<PlaceholderPage title="Suppliers" />} />
+                        <Route path="purchases" element={<PurchaseOrders />} />
+                        <Route path="suppliers" element={<Suppliers />} />
                         <Route path="warehouses" element={<PlaceholderPage title="Warehouses" />} />
                         
                         {/* Accounting & Finance */}

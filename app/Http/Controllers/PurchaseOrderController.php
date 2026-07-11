@@ -34,6 +34,12 @@ class PurchaseOrderController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('product_id')) {
+            $query->whereHas('items', function ($q) use ($request) {
+                $q->where('product_id', $request->product_id);
+            });
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('supplier', function ($q) use ($search) {
