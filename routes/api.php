@@ -10,6 +10,7 @@ use App\Http\Controllers\ProductVariationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
@@ -108,5 +109,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
         Route::post('purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    });
+
+    // POS — requires manage_pos permission
+    Route::middleware('permission:manage_pos')->group(function () {
+        Route::get('pos/products', [PosController::class, 'products']);
     });
 });
