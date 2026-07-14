@@ -20,6 +20,7 @@ import DamagedLostStock from './pages/DamagedLostStock';
 import StockMovementHistory from './pages/StockMovementHistory';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
+import POS from './pages/POS';
 
 function App() {
     return (
@@ -35,7 +36,7 @@ function App() {
                         <Route path="dashboard" element={<Dashboard />} />
                         
                         {/* Core Operations */}
-                        <Route path="pos" element={<PlaceholderPage title="POS Station" />} />
+                        <Route path="pos" element={<POS />} />
                         <Route path="orders" element={<PlaceholderPage title="Order Ledger" />} />
                         
                         {/* Catalog & Supply */}

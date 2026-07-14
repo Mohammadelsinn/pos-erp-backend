@@ -114,5 +114,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // POS — requires manage_pos permission
     Route::middleware('permission:manage_pos')->group(function () {
         Route::get('pos/products', [PosController::class, 'products']);
+        Route::post('pos/checkout', [PosController::class, 'checkout']);
     });
 });

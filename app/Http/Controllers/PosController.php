@@ -105,4 +105,97 @@ class PosController extends Controller
 
         return response()->json(['data' => $data]);
     }
+
+    public function checkout(Request $request)
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+            'subtotal' => 'required|numeric|min:0',
+            'discount_amount' => 'required|numeric|min:0',
+            'tax_amount' => 'required|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.product_variation_id' => 'nullable|integer|exists:product_variations,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.discount_amount' => 'required|numeric|min:0',
+            'items.*.tax_amount' => 'required|numeric|min:0',
+            'items.*.total_price' => 'required|numeric|min:0',
+        ]);
+
+        \DB::beginTransaction();
+        try {
+            // Create the Sale
+            $sale = \App\Models\Sale::create([
+                'branch_id' => $validated['branch_id'],
+                'user_id' => \Auth::id(),
+                'status' => 'completed',
+                'subtotal' => $validated['subtotal'],
+                'discount_amount' => $validated['discount_amount'],
+                'tax_amount' => $validated['tax_amount'],
+                'total_amount' => $validated['total_amount'],
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            // Save items and adjust stock
+            foreach ($validated['items'] as $item) {
+                $saleItem = \App\Models\SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $item['product_id'],
+                    'product_variation_id' => $item['product_variation_id'] ?? null,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'discount_amount' => $item['discount_amount'],
+                    'tax_amount' => $item['tax_amount'],
+                    'total_price' => $item['total_price'],
+                ]);
+
+                // Find or create inventory for this branch + product/variation
+                $inventory = \App\Models\Inventory::firstOrCreate([
+                    'branch_id' => $validated['branch_id'],
+                    'product_id' => $item['product_id'],
+                    'product_variation_id' => $item['product_variation_id'] ?? null,
+                ], [
+                    'quantity' => 0,
+                    'min_stock_level' => 5,
+                ]);
+
+                // Decrement stock
+                $inventory->quantity = max(0, $inventory->quantity - $item['quantity']);
+                $inventory->save();
+
+                // Create inventory adjustment audit log
+                \App\Models\InventoryAdjustment::create([
+                    'inventory_id' => $inventory->id,
+                    'product_id' => $inventory->product_id,
+                    'product_variation_id' => $inventory->product_variation_id,
+                    'branch_id' => $inventory->branch_id,
+                    'user_id' => \Auth::id(),
+                    'type' => 'out',
+                    'quantity' => -$item['quantity'],
+                    'reason' => 'POS Sale #' . $sale->id,
+                    'reference_type' => 'App\Models\Sale',
+                    'reference_id' => $sale->id,
+                ]);
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sale completed successfully',
+                'sale_id' => $sale->id,
+                'sale' => $sale->load('items.product', 'items.variation'),
+            ], 201);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process checkout: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
