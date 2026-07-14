@@ -115,5 +115,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:manage_pos')->group(function () {
         Route::get('pos/products', [PosController::class, 'products']);
         Route::post('pos/checkout', [PosController::class, 'checkout']);
+
+        // Draft sale (cart) management
+        Route::post('pos/sales', [PosController::class, 'store']);
+        Route::post('pos/sales/{id}/items', [PosController::class, 'addItem']);
+        Route::put('pos/sales/{id}/items/{itemId}', [PosController::class, 'updateItem']);
+        Route::delete('pos/sales/{id}/items/{itemId}', [PosController::class, 'removeItem']);
     });
 });

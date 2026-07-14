@@ -2,8 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inventory;
 use App\Models\Product;
+use App\Models\ProductVariation;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PosController extends Controller
 {
@@ -104,6 +110,235 @@ class PosController extends Controller
         });
 
         return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Create a new draft sale (cart), optionally seeded with items.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+            'notes' => 'nullable|string',
+            'items' => 'array',
+            'items.*.product_id' => 'required_with:items|integer|exists:products,id',
+            'items.*.product_variation_id' => 'nullable|integer|exists:product_variations,id',
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+        ]);
+
+        $items = $validated['items'] ?? [];
+
+        foreach ($items as $item) {
+            $error = $this->checkStock(
+                $validated['branch_id'],
+                $item['product_id'],
+                $item['product_variation_id'] ?? null,
+                $item['quantity']
+            );
+            if ($error) {
+                return response()->json(['message' => $error], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $sale = Sale::create([
+                'branch_id' => $validated['branch_id'],
+                'user_id' => Auth::id(),
+                'status' => 'draft',
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($items as $item) {
+                $variationId = $item['product_variation_id'] ?? null;
+                $unitPrice = $this->unitPriceFor($item['product_id'], $variationId);
+
+                SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $item['product_id'],
+                    'product_variation_id' => $variationId,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $unitPrice,
+                    'total_price' => round($unitPrice * $item['quantity'], 2),
+                ]);
+            }
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'), 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to create draft sale: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Add an item to an existing draft sale. Increases quantity if the item already exists in the cart.
+     */
+    public function addItem(Request $request, $saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be modified.'], 422);
+        }
+
+        $validated = $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'product_variation_id' => 'nullable|integer|exists:product_variations,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $variationId = $validated['product_variation_id'] ?? null;
+
+        $existingItem = SaleItem::where('sale_id', $sale->id)
+            ->where('product_id', $validated['product_id'])
+            ->where('product_variation_id', $variationId)
+            ->first();
+
+        $newQuantity = ($existingItem->quantity ?? 0) + $validated['quantity'];
+
+        $error = $this->checkStock($sale->branch_id, $validated['product_id'], $variationId, $newQuantity);
+        if ($error) {
+            return response()->json(['message' => $error], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            if ($existingItem) {
+                $existingItem->quantity = $newQuantity;
+                $existingItem->total_price = round($existingItem->unit_price * $newQuantity, 2);
+                $existingItem->save();
+            } else {
+                $unitPrice = $this->unitPriceFor($validated['product_id'], $variationId);
+
+                SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $validated['product_id'],
+                    'product_variation_id' => $variationId,
+                    'quantity' => $newQuantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => round($unitPrice * $newQuantity, 2),
+                ]);
+            }
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'), 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to add item: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Update the quantity of an item already in the cart.
+     */
+    public function updateItem(Request $request, $saleId, $itemId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be modified.'], 422);
+        }
+
+        $item = SaleItem::where('sale_id', $sale->id)->findOrFail($itemId);
+
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $error = $this->checkStock($sale->branch_id, $item->product_id, $item->product_variation_id, $validated['quantity']);
+        if ($error) {
+            return response()->json(['message' => $error], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $item->quantity = $validated['quantity'];
+            $item->total_price = round($item->unit_price * $validated['quantity'], 2);
+            $item->save();
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update item: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remove an item from the cart and recalculate totals.
+     */
+    public function removeItem($saleId, $itemId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be modified.'], 422);
+        }
+
+        $item = SaleItem::where('sale_id', $sale->id)->findOrFail($itemId);
+
+        DB::beginTransaction();
+        try {
+            $item->delete();
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to remove item: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Returns an error message if the requested quantity exceeds available branch stock, null otherwise.
+     */
+    private function checkStock(int $branchId, int $productId, ?int $variationId, int $neededQuantity): ?string
+    {
+        $available = Inventory::where('branch_id', $branchId)
+            ->where('product_id', $productId)
+            ->where('product_variation_id', $variationId)
+            ->value('quantity') ?? 0;
+
+        if ($available <= 0) {
+            return 'This item is out of stock.';
+        }
+
+        if ($neededQuantity > $available) {
+            return "Only {$available} unit(s) available in stock.";
+        }
+
+        return null;
+    }
+
+    private function unitPriceFor(int $productId, ?int $variationId): float
+    {
+        if ($variationId) {
+            return (float) ProductVariation::findOrFail($variationId)->selling_price;
+        }
+
+        return (float) Product::findOrFail($productId)->selling_price;
+    }
+
+    private function recalculateTotals(Sale $sale): void
+    {
+        $subtotal = $sale->items()->sum('total_price');
+
+        $sale->subtotal = $subtotal;
+        $sale->total_amount = $subtotal - $sale->discount_amount + $sale->tax_amount;
+        $sale->save();
     }
 
     public function checkout(Request $request)
