@@ -384,6 +384,123 @@ class PosController extends Controller
     }
 
     /**
+     * Attach a customer to a sale. No FK check against a customers table — it doesn't exist
+     * yet in this schema (see the sales migration note); customer_id is a plain nullable id.
+     */
+    public function attachCustomer(Request $request, $saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['draft', 'held'], 'Only draft or held sales can be modified.');
+        if ($error) {
+            return $error;
+        }
+
+        $validated = $request->validate([
+            'customer_id' => 'required|integer|min:1',
+        ]);
+
+        $sale->customer_id = $validated['customer_id'];
+        $sale->save();
+
+        return response()->json($sale->load('items.product', 'items.variation'));
+    }
+
+    /**
+     * Remove the customer from a sale.
+     */
+    public function detachCustomer($saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['draft', 'held'], 'Only draft or held sales can be modified.');
+        if ($error) {
+            return $error;
+        }
+
+        $sale->customer_id = null;
+        $sale->save();
+
+        return response()->json($sale->load('items.product', 'items.variation'));
+    }
+
+    /**
+     * Put a draft sale on hold (parks the cart so the cashier can serve another customer).
+     */
+    public function hold($saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['draft'], 'Only draft sales can be held.');
+        if ($error) {
+            return $error;
+        }
+
+        $sale->status = 'held';
+        $sale->save();
+
+        return response()->json($sale->load('items.product', 'items.variation'));
+    }
+
+    /**
+     * List all held sales for a branch, most recently held first.
+     */
+    public function heldSales(Request $request)
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $heldSales = Sale::where('status', 'held')
+            ->where('branch_id', $validated['branch_id'])
+            ->with('items.product', 'items.variation')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return response()->json(['data' => $heldSales]);
+    }
+
+    /**
+     * Resume a held sale back into an editable draft.
+     */
+    public function resume($saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['held'], 'Only held sales can be resumed.');
+        if ($error) {
+            return $error;
+        }
+
+        $sale->status = 'draft';
+        $sale->save();
+
+        return response()->json($sale->load('items.product', 'items.variation'));
+    }
+
+    /**
+     * Add, update, or clear the note on a sale.
+     */
+    public function updateNote(Request $request, $saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['draft', 'held'], 'Only draft or held sales can be modified.');
+        if ($error) {
+            return $error;
+        }
+
+        $validated = $request->validate([
+            'notes' => 'present|nullable|string',
+        ]);
+
+        $sale->notes = $validated['notes'];
+        $sale->save();
+
+        return response()->json($sale->load('items.product', 'items.variation'));
+    }
+
+    /**
      * Remove an item from the cart and recalculate totals.
      */
     public function removeItem($saleId, $itemId)
@@ -427,6 +544,18 @@ class PosController extends Controller
 
         if ($neededQuantity > $available) {
             return "Only {$available} unit(s) available in stock.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns a 422 JSON response if the sale's status isn't one of the allowed statuses, null otherwise.
+     */
+    private function ensureStatusIn(Sale $sale, array $statuses, string $message): ?\Illuminate\Http\JsonResponse
+    {
+        if (!in_array($sale->status, $statuses, true)) {
+            return response()->json(['message' => $message], 422);
         }
 
         return null;

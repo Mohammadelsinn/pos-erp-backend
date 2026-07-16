@@ -124,5 +124,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('pos/sales/{id}/items/{itemId}/discount', [PosController::class, 'updateItemDiscount']);
         Route::put('pos/sales/{id}/discount', [PosController::class, 'updateDiscount']);
         Route::get('pos/sales/{id}/totals', [PosController::class, 'totals']);
+
+        // Customer, hold/resume, and note management
+        Route::get('pos/held-sales', [PosController::class, 'heldSales']);
+        Route::post('pos/sales/{id}/customer', [PosController::class, 'attachCustomer']);
+        Route::delete('pos/sales/{id}/customer', [PosController::class, 'detachCustomer']);
+        Route::patch('pos/sales/{id}/hold', [PosController::class, 'hold']);
+        Route::patch('pos/sales/{id}/resume', [PosController::class, 'resume']);
+        Route::patch('pos/sales/{id}/note', [PosController::class, 'updateNote']);
     });
 });
