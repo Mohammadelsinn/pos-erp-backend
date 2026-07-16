@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\ProductVariation;
 use Illuminate\Http\Request;
@@ -134,7 +135,10 @@ class ProductController extends Controller
                 foreach ($variationsData as $var) {
                     $product->variations()->create($var);
                 }
+                $product->load('variations');
             }
+
+            Inventory::ensureForProduct($product);
 
             DB::commit();
             $product->load(['category', 'brand', 'variations', 'inventories.branch']);
@@ -236,10 +240,13 @@ class ProductController extends Controller
                         $product->variations()->create($var);
                     }
                 }
+                $product->load('variations');
             } else {
                 // Delete all variations if variations were toggled off
                 $product->variations()->delete();
             }
+
+            Inventory::ensureForProduct($product);
 
             DB::commit();
             $product->load(['category', 'brand', 'variations', 'inventories.branch']);

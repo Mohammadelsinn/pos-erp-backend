@@ -8,7 +8,7 @@ import Filters from '../components/Filters';
 import { Input, Select, Checkbox } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { UserPlus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, Search, Mail, Key } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, Search, Mail, Key, AlertCircle } from 'lucide-react';
 
 export default function StaffMembers() {
     const [users, setUsers] = useState([]);
@@ -47,45 +47,8 @@ export default function StaffMembers() {
             setUsers(usersRes.data);
             setRoles(rolesRes.data);
         } catch (err) {
-            console.warn('API error, loading simulated fallback mock data.', err);
-            
-            // Fallback mock roles
-            const fallbackRoles = [
-                { id: 1, name: 'admin', display_name: 'Administrator' },
-                { id: 2, name: 'cashier', display_name: 'Store Cashier' },
-                { id: 3, name: 'accountant', display_name: 'Lead Accountant' },
-                { id: 4, name: 'manager', display_name: 'Manager' }
-            ];
-            setRoles(fallbackRoles);
-
-            // Fallback mock users
-            const fallbackUsers = [
-                {
-                    id: 1,
-                    name: 'Admin User',
-                    email: 'admin@pos-erp.test',
-                    is_active: true,
-                    roles: [fallbackRoles[0]],
-                    created_at: '2026-06-01T12:00:00.000000Z'
-                },
-                {
-                    id: 2,
-                    name: 'Sarah Cashier',
-                    email: 'cashier@pos-erp.test',
-                    is_active: true,
-                    roles: [fallbackRoles[1]],
-                    created_at: '2026-06-10T14:30:00.000000Z'
-                },
-                {
-                    id: 3,
-                    name: 'Michael Accountant',
-                    email: 'accountant@pos-erp.test',
-                    is_active: false,
-                    roles: [fallbackRoles[2]],
-                    created_at: '2026-06-15T09:15:00.000000Z'
-                }
-            ];
-            setUsers(fallbackUsers);
+            console.error('Failed to fetch staff/roles.', err);
+            setError(err.response?.data?.message || 'Failed to load staff members. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -156,8 +119,8 @@ export default function StaffMembers() {
             // Update local state
             setUsers(users.map(u => u.id === user.id ? { ...u, is_active: response.data.user.is_active } : u));
         } catch (err) {
-            console.warn('API error, performing simulated status toggle.', err);
-            setUsers(users.map(u => u.id === user.id ? { ...u, is_active: !u.is_active } : u));
+            console.error('Failed to toggle staff status.', err);
+            alert(err.response?.data?.message || 'Failed to update staff member status. Please try again.');
         }
     };
 
@@ -202,33 +165,12 @@ export default function StaffMembers() {
             }
             setModalOpen(false);
         } catch (err) {
-            console.warn('API error, performing simulated save.', err);
-            
-            // Simulated Save Local State
-            const selectedRole = roles.find(r => r.id === Number(formRole));
-            const roleName = selectedRole ? selectedRole.name : 'cashier';
-            const roleDisplayName = selectedRole ? selectedRole.display_name : 'Store Cashier';
-            
-            if (currentUser) {
-                setUsers(users.map(u => u.id === currentUser.id ? {
-                    ...u,
-                    name: formName,
-                    email: formEmail,
-                    is_active: formIsActive,
-                    roles: [{ id: formRole, name: roleName, display_name: roleDisplayName }]
-                } : u));
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimulatedUser = {
-                    id: Date.now(),
-                    name: formName,
-                    email: formEmail,
-                    is_active: formIsActive,
-                    roles: [{ id: formRole, name: roleName, display_name: roleDisplayName }],
-                    created_at: new Date().toISOString()
-                };
-                setUsers([...users, newSimulatedUser]);
+                console.error('Failed to save staff member.', err);
+                alert(err.response?.data?.message || 'Failed to save staff member. Please try again.');
             }
-            setModalOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -238,13 +180,13 @@ export default function StaffMembers() {
     const handleConfirmDelete = async () => {
         if (!currentUser) return;
         setSubmitting(true);
-        
+
         try {
             await axios.delete(`/api/users/${currentUser.id}`);
             setUsers(users.filter(u => u.id !== currentUser.id));
         } catch (err) {
-            console.warn('API error, performing simulated delete.', err);
-            setUsers(users.filter(u => u.id !== currentUser.id));
+            console.error('Failed to delete staff member.', err);
+            alert(err.response?.data?.message || 'Failed to delete staff member. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -350,7 +292,14 @@ export default function StaffMembers() {
             actions={actions}
         >
             <div className="space-y-6">
-                
+
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                        <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                )}
+
                 {/* Filters */}
                 <Filters
                     searchPlaceholder="Search by name or email..."

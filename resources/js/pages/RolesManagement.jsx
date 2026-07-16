@@ -8,7 +8,7 @@ import Filters from '../components/Filters';
 import { Input, Textarea, Checkbox } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { ShieldAlert, Plus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, CheckSquare } from 'lucide-react';
+import { ShieldAlert, Plus, Edit, Trash2, Shield, ToggleLeft, ToggleRight, CheckSquare, AlertCircle } from 'lucide-react';
 
 export default function RolesManagement() {
     const [roles, setRoles] = useState([]);
@@ -44,45 +44,8 @@ export default function RolesManagement() {
             setRoles(rolesRes.data);
             setPermissions(permsRes.data);
         } catch (err) {
-            console.warn('API error, loading simulated fallback mock data.', err);
-            
-            // Fallback mock permissions
-            const fallbackPerms = [
-                { id: 1, name: 'manage_users', display_name: 'Manage Users', description: 'Create, update, and disable staff members' },
-                { id: 2, name: 'manage_roles', display_name: 'Manage Roles', description: 'Configure role definitions and access permissions' },
-                { id: 3, name: 'manage_permissions', display_name: 'Manage Permissions', description: 'Edit system permission categories' },
-                { id: 4, name: 'manage_settings', display_name: 'Manage Settings', description: 'Modify POS system config and integrations' },
-                { id: 5, name: 'manage_branches', display_name: 'Manage Branches', description: 'Add or modify store branches and warehouses' },
-                { id: 6, name: 'access_pos', display_name: 'Access POS', description: 'Run cashier terminal sales and drawers' },
-                { id: 7, name: 'view_reports', display_name: 'View Reports', description: 'Export accounting ledgers and financial reports' }
-            ];
-            setPermissions(fallbackPerms);
-
-            // Fallback mock roles
-            const fallbackRoles = [
-                {
-                    id: 1,
-                    name: 'admin',
-                    display_name: 'Administrator',
-                    description: 'Full administrative access to all modules and configurations.',
-                    permissions: fallbackPerms
-                },
-                {
-                    id: 2,
-                    name: 'cashier',
-                    display_name: 'Store Cashier',
-                    description: 'Front-desk point of sale terminal operation, cashier transactions, and drawer logs.',
-                    permissions: fallbackPerms.filter(p => ['access_pos'].includes(p.name))
-                },
-                {
-                    id: 3,
-                    name: 'accountant',
-                    display_name: 'Lead Accountant',
-                    description: 'Supervision of general ledgers, tax compliance, expenses tracker, and financial reports.',
-                    permissions: fallbackPerms.filter(p => ['view_reports', 'manage_settings'].includes(p.name))
-                }
-            ];
-            setRoles(fallbackRoles);
+            console.error('Failed to fetch roles/permissions.', err);
+            setError(err.response?.data?.message || 'Failed to load roles. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -181,29 +144,12 @@ export default function RolesManagement() {
             }
             setModalOpen(false);
         } catch (err) {
-            console.warn('API error, performing simulated role save.', err);
-
-            // Simulated Save
-            const selectedPermDetails = permissions.filter(p => formPermissions.includes(p.id));
-            if (currentRole) {
-                setRoles(roles.map(r => r.id === currentRole.id ? {
-                    ...r,
-                    name: payload.name,
-                    display_name: formDisplayName,
-                    description: formDescription,
-                    permissions: selectedPermDetails
-                } : r));
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimRole = {
-                    id: Date.now(),
-                    name: payload.name,
-                    display_name: formDisplayName,
-                    description: formDescription,
-                    permissions: selectedPermDetails
-                };
-                setRoles([...roles, newSimRole]);
+                console.error('Failed to save role.', err);
+                alert(err.response?.data?.message || 'Failed to save role. Please try again.');
             }
-            setModalOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -217,8 +163,8 @@ export default function RolesManagement() {
             await axios.delete(`/api/roles/${currentRole.id}`);
             setRoles(roles.filter(r => r.id !== currentRole.id));
         } catch (err) {
-            console.warn('API error, performing simulated role delete.', err);
-            setRoles(roles.filter(r => r.id !== currentRole.id));
+            console.error('Failed to delete role.', err);
+            alert(err.response?.data?.message || 'Failed to delete role. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -326,7 +272,14 @@ export default function RolesManagement() {
             actions={actions}
         >
             <div className="space-y-6">
-                
+
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                        <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                )}
+
                 {/* Search */}
                 <Filters
                     searchPlaceholder="Search roles by name or description..."

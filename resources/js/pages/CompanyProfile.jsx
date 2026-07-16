@@ -32,15 +32,8 @@ export default function CompanyProfile() {
                 company_logo: response.data.company_logo || ''
             });
         } catch (err) {
-            console.warn('API error fetching settings, loading fallback values.', err);
-            // Fallback mock settings
-            setSettings({
-                company_name: 'Enterprise Store Ltd',
-                company_email: 'office@example.com',
-                company_phone: '+1 (555) 019-2831',
-                company_address: '100 Innovation Way, Suite 400, Tech District',
-                company_logo: ''
-            });
+            console.error('Failed to load company profile settings.', err);
+            setError(err.response?.data?.message || 'Failed to load company profile. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -106,10 +99,8 @@ export default function CompanyProfile() {
             window.dispatchEvent(new Event('company-settings-updated'));
             setTimeout(() => setSuccessMessage(''), 4000);
         } catch (err) {
-            console.warn('API error saving settings, performing local fallback update.', err);
-            setSuccessMessage('Profile saved successfully (simulated fallback).');
-            window.dispatchEvent(new Event('company-settings-updated'));
-            setTimeout(() => setSuccessMessage(''), 4000);
+            console.error('Failed to save company profile.', err);
+            setError(err.response?.data?.message || 'Failed to update company profile. Please try again.');
         } finally {
             setIsSaving(false);
         }

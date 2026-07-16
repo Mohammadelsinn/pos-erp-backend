@@ -8,7 +8,7 @@ import Filters from '../components/Filters';
 import { Input, Textarea } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { ShieldAlert, Plus, Edit, Trash2, Key, CheckCircle, Shield } from 'lucide-react';
+import { ShieldAlert, Plus, Edit, Trash2, Key, CheckCircle, Shield, AlertCircle } from 'lucide-react';
 
 const SYSTEM_PERMISSIONS = [
     'manage_users',
@@ -47,18 +47,8 @@ export default function PermissionsManagement() {
             const response = await axios.get('/api/permissions');
             setPermissions(response.data);
         } catch (err) {
-            console.warn('API error, loading simulated fallback mock data.', err);
-            
-            // Fallback mock permissions
-            const fallbackPerms = [
-                { id: 1, name: 'manage_users', display_name: 'Manage Users', description: 'Create, update, and disable staff members', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }, { id: 2, name: 'manager', display_name: 'Manager' }] },
-                { id: 2, name: 'manage_roles', display_name: 'Manage Roles', description: 'Configure role definitions and access permissions', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }] },
-                { id: 3, name: 'manage_permissions', display_name: 'Manage Permissions', description: 'Edit system permission categories', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }] },
-                { id: 4, name: 'view_dashboard', display_name: 'View Dashboard', description: 'Access the main dashboard', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }, { id: 2, name: 'manager', display_name: 'Manager' }, { id: 3, name: 'cashier', display_name: 'Store Cashier' }, { id: 4, name: 'accountant', display_name: 'Lead Accountant' }] },
-                { id: 5, name: 'manage_settings', display_name: 'Manage Settings', description: 'Modify POS system config and integrations', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }, { id: 4, name: 'accountant', display_name: 'Lead Accountant' }] },
-                { id: 6, name: 'manage_branches', display_name: 'Manage Branches', description: 'Add or modify store branches and warehouses', roles: [{ id: 1, name: 'admin', display_name: 'Administrator' }] }
-            ];
-            setPermissions(fallbackPerms);
+            console.error('Failed to fetch permissions.', err);
+            setError(err.response?.data?.message || 'Failed to load permissions. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -135,27 +125,12 @@ export default function PermissionsManagement() {
             }
             setModalOpen(false);
         } catch (err) {
-            console.warn('API error, performing simulated permission save.', err);
-
-            // Simulated Save
-            if (currentPermission) {
-                setPermissions(permissions.map(p => p.id === currentPermission.id ? {
-                    ...p,
-                    name: payload.name,
-                    display_name: formDisplayName,
-                    description: formDescription
-                } : p));
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimPerm = {
-                    id: Date.now(),
-                    name: payload.name,
-                    display_name: formDisplayName,
-                    description: formDescription,
-                    roles: []
-                };
-                setPermissions([...permissions, newSimPerm]);
+                console.error('Failed to save permission.', err);
+                alert(err.response?.data?.message || 'Failed to save permission. Please try again.');
             }
-            setModalOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -169,8 +144,8 @@ export default function PermissionsManagement() {
             await axios.delete(`/api/permissions/${currentPermission.id}`);
             setPermissions(permissions.filter(p => p.id !== currentPermission.id));
         } catch (err) {
-            console.warn('API error, performing simulated permission delete.', err);
-            setPermissions(permissions.filter(p => p.id !== currentPermission.id));
+            console.error('Failed to delete permission.', err);
+            alert(err.response?.data?.message || 'Failed to delete permission. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -280,7 +255,14 @@ export default function PermissionsManagement() {
             actions={actions}
         >
             <div className="space-y-6">
-                
+
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                        <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                )}
+
                 {/* Search */}
                 <Filters
                     searchPlaceholder="Search permissions by display title or code name..."

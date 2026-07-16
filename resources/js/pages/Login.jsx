@@ -1,35 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Mail, Lock, Eye, EyeOff, Terminal, Key } from 'lucide-react';
 
 export default function Login() {
     const { login, loading } = useAuth();
     const navigate = useNavigate();
-    
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('login'); // login / help
-    const [companyInfo, setCompanyInfo] = useState({
-        name: 'System ERP',
-        logo: ''
-    });
-
-    useEffect(() => {
-        axios.get('/api/settings')
-            .then(res => {
-                setCompanyInfo({
-                    name: res.data.company_name || 'System ERP',
-                    logo: res.data.company_logo || ''
-                });
-            })
-            .catch(err => {
-                console.warn('Failed to load company info in login page', err);
-            });
-    }, []);
+    const companyInfo = { name: 'System ERP', logo: '' };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
