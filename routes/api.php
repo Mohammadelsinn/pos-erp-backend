@@ -121,5 +121,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('pos/sales/{id}/items', [PosController::class, 'addItem']);
         Route::put('pos/sales/{id}/items/{itemId}', [PosController::class, 'updateItem']);
         Route::delete('pos/sales/{id}/items/{itemId}', [PosController::class, 'removeItem']);
+        Route::put('pos/sales/{id}/items/{itemId}/discount', [PosController::class, 'updateItemDiscount']);
+        Route::put('pos/sales/{id}/discount', [PosController::class, 'updateDiscount']);
+        Route::get('pos/sales/{id}/totals', [PosController::class, 'totals']);
     });
 });

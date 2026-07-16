@@ -153,14 +153,16 @@ class PosController extends Controller
                 $variationId = $item['product_variation_id'] ?? null;
                 $unitPrice = $this->unitPriceFor($item['product_id'], $variationId);
 
-                SaleItem::create([
+                $saleItem = new SaleItem([
                     'sale_id' => $sale->id,
                     'product_id' => $item['product_id'],
                     'product_variation_id' => $variationId,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
-                    'total_price' => round($unitPrice * $item['quantity'], 2),
                 ]);
+
+                $this->applyItemDiscount($saleItem, 0, null);
+                $saleItem->save();
             }
 
             $this->recalculateTotals($sale);
@@ -209,19 +211,21 @@ class PosController extends Controller
         try {
             if ($existingItem) {
                 $existingItem->quantity = $newQuantity;
-                $existingItem->total_price = round($existingItem->unit_price * $newQuantity, 2);
+                $this->applyItemDiscount($existingItem, null, null);
                 $existingItem->save();
             } else {
                 $unitPrice = $this->unitPriceFor($validated['product_id'], $variationId);
 
-                SaleItem::create([
+                $saleItem = new SaleItem([
                     'sale_id' => $sale->id,
                     'product_id' => $validated['product_id'],
                     'product_variation_id' => $variationId,
                     'quantity' => $newQuantity,
                     'unit_price' => $unitPrice,
-                    'total_price' => round($unitPrice * $newQuantity, 2),
                 ]);
+
+                $this->applyItemDiscount($saleItem, 0, null);
+                $saleItem->save();
             }
 
             $this->recalculateTotals($sale);
@@ -260,7 +264,7 @@ class PosController extends Controller
         DB::beginTransaction();
         try {
             $item->quantity = $validated['quantity'];
-            $item->total_price = round($item->unit_price * $validated['quantity'], 2);
+            $this->applyItemDiscount($item, null, null);
             $item->save();
 
             $this->recalculateTotals($sale);
@@ -272,6 +276,111 @@ class PosController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Failed to update item: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Set (or clear) the discount on a single cart item, by flat amount or percentage,
+     * and recalculate its tax and total accordingly.
+     */
+    public function updateItemDiscount(Request $request, $saleId, $itemId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be modified.'], 422);
+        }
+
+        $item = SaleItem::where('sale_id', $sale->id)->findOrFail($itemId);
+
+        $validated = $request->validate([
+            'discount_amount' => 'nullable|numeric|min:0',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        if (!array_key_exists('discount_amount', $validated) && !array_key_exists('discount_percentage', $validated)) {
+            return response()->json(['message' => 'Provide either discount_amount or discount_percentage.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $this->applyItemDiscount(
+                $item,
+                $validated['discount_amount'] ?? null,
+                $validated['discount_percentage'] ?? null
+            );
+            $item->save();
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update item discount: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Set (or clear) the order-level discount on the sale, by flat amount or percentage,
+     * applied on top of any item-level discounts.
+     */
+    public function updateDiscount(Request $request, $saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be modified.'], 422);
+        }
+
+        $validated = $request->validate([
+            'discount_amount' => 'nullable|numeric|min:0',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        if (!array_key_exists('discount_amount', $validated) && !array_key_exists('discount_percentage', $validated)) {
+            return response()->json(['message' => 'Provide either discount_amount or discount_percentage.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $this->applySaleDiscount(
+                $sale,
+                $validated['discount_amount'] ?? null,
+                $validated['discount_percentage'] ?? null
+            );
+            $sale->save();
+
+            $this->recalculateTotals($sale);
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update discount: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Return the calculated order totals for a sale: subtotal, combined discount,
+     * total tax and grand total.
+     */
+    public function totals($saleId)
+    {
+        $sale = Sale::with('items')->findOrFail($saleId);
+
+        $this->recalculateTotals($sale);
+
+        $itemDiscounts = $sale->items->sum('discount_amount');
+        $combinedDiscount = round($itemDiscounts + $sale->discount_amount, 2);
+
+        return response()->json([
+            'subtotal' => round($sale->subtotal, 2),
+            'discount_amount' => $combinedDiscount,
+            'tax_amount' => round($sale->tax_amount, 2),
+            'grand_total' => round($sale->total_amount, 2),
+        ]);
     }
 
     /**
@@ -332,12 +441,98 @@ class PosController extends Controller
         return (float) Product::findOrFail($productId)->selling_price;
     }
 
+    /**
+     * Tax rate (%) for a product or, if given, its variation.
+     */
+    private function taxRateFor(int $productId, ?int $variationId): float
+    {
+        if ($variationId) {
+            return (float) (ProductVariation::find($variationId)->tax_percentage ?? 0);
+        }
+
+        return (float) (Product::find($productId)->tax ?? 0);
+    }
+
+    /**
+     * Apply a discount to a single sale item and recompute its total_price (after discount)
+     * and tax_amount (on the post-discount amount, at the product/variation tax rate).
+     *
+     * Pass both $discountAmount and $discountPercentage as null to re-derive the item's
+     * existing discount against its current line subtotal (e.g. after a quantity change).
+     */
+    private function applyItemDiscount(SaleItem $item, ?float $discountAmount = null, ?float $discountPercentage = null): void
+    {
+        $lineSubtotal = round($item->unit_price * $item->quantity, 2);
+
+        if ($discountPercentage !== null) {
+            $discountPercentage = max(0, min(100, $discountPercentage));
+            $discountAmount = round($lineSubtotal * $discountPercentage / 100, 2);
+        } elseif ($discountAmount !== null) {
+            $discountAmount = max(0, min($discountAmount, $lineSubtotal));
+            $discountPercentage = $lineSubtotal > 0 ? round($discountAmount / $lineSubtotal * 100, 2) : 0;
+        } else {
+            $discountPercentage = (float) $item->discount_percentage;
+            if ($discountPercentage > 0) {
+                $discountAmount = round($lineSubtotal * $discountPercentage / 100, 2);
+            } else {
+                $discountAmount = min((float) $item->discount_amount, $lineSubtotal);
+            }
+        }
+
+        $totalPrice = round($lineSubtotal - $discountAmount, 2);
+        $taxRate = $this->taxRateFor($item->product_id, $item->product_variation_id);
+
+        $item->discount_amount = $discountAmount;
+        $item->discount_percentage = $discountPercentage;
+        $item->total_price = $totalPrice;
+        $item->tax_amount = round($totalPrice * $taxRate / 100, 2);
+    }
+
+    /**
+     * Apply the order-level discount, on top of any item-level discounts already applied.
+     * Percentage is computed against what remains of the subtotal after item discounts.
+     */
+    private function applySaleDiscount(Sale $sale, ?float $discountAmount = null, ?float $discountPercentage = null): void
+    {
+        $items = $sale->items()->get(['unit_price', 'quantity', 'discount_amount']);
+
+        $rawSubtotal = (float) $items->sum(fn ($i) => $i->unit_price * $i->quantity);
+        $itemDiscounts = (float) $items->sum('discount_amount');
+        $base = max(0, round($rawSubtotal - $itemDiscounts, 2));
+
+        if ($discountPercentage !== null) {
+            $discountPercentage = max(0, min(100, $discountPercentage));
+            $discountAmount = round($base * $discountPercentage / 100, 2);
+        } elseif ($discountAmount !== null) {
+            $discountAmount = max(0, min($discountAmount, $base));
+            $discountPercentage = $base > 0 ? round($discountAmount / $base * 100, 2) : 0;
+        } else {
+            $discountAmount = 0;
+            $discountPercentage = 0;
+        }
+
+        $sale->discount_amount = $discountAmount;
+        $sale->discount_percentage = $discountPercentage;
+    }
+
+    /**
+     * Recompute subtotal (pre-discount line total), tax (sum of item tax) and grand total
+     * (subtotal - item discounts - order discount + tax) for the sale.
+     */
     private function recalculateTotals(Sale $sale): void
     {
-        $subtotal = $sale->items()->sum('total_price');
+        $items = $sale->items()->get(['unit_price', 'quantity', 'discount_amount', 'tax_amount']);
 
-        $sale->subtotal = $subtotal;
-        $sale->total_amount = $subtotal - $sale->discount_amount + $sale->tax_amount;
+        $subtotal = (float) $items->sum(fn ($i) => $i->unit_price * $i->quantity);
+        $itemDiscounts = (float) $items->sum('discount_amount');
+        $taxAmount = (float) $items->sum('tax_amount');
+        $orderDiscount = (float) $sale->discount_amount;
+
+        $totalDiscount = $itemDiscounts + $orderDiscount;
+
+        $sale->subtotal = round($subtotal, 2);
+        $sale->tax_amount = round($taxAmount, 2);
+        $sale->total_amount = round($subtotal - $totalDiscount + $taxAmount, 2);
         $sale->save();
     }
 
