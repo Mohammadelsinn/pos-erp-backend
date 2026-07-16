@@ -38,6 +38,7 @@ export default function POS() {
     // Cart state
     const [cart, setCart] = useState([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
+    const [resumedSaleId, setResumedSaleId] = useState(null);
     const [cartDiscount, setCartDiscount] = useState(0); // flat discount amount or percentage
     const [cartDiscountType, setCartDiscountType] = useState('flat'); // 'flat' or 'percent'
     const [cartNotes, setCartNotes] = useState('');
@@ -116,17 +117,43 @@ export default function POS() {
             });
     }, [resolvedBranchId, selectedCategoryId, searchQuery]);
 
-    // Load held carts from localStorage on init
+    const fetchHeldSales = () => {
+        if (!resolvedBranchId) return;
+        axios.get(`/api/pos/held-sales?branch_id=${resolvedBranchId}`)
+            .then(res => {
+                const mapped = res.data.data.map(sale => ({
+                    id: sale.id,
+                    reference: sale.notes || `Suspended Order #${sale.id}`,
+                    branchName: activeBranch,
+                    branchId: sale.branch_id,
+                    timestamp: new Date(sale.updated_at).toLocaleString(),
+                    total: Number(sale.total_amount) || 0,
+                    notes: sale.notes || '',
+                    discount: Number(sale.discount_amount) || 0,
+                    discountType: 'flat',
+                    items: sale.items.map(item => ({
+                        cartId: item.product_variation_id ? `var-${item.product_variation_id}` : `prod-${item.product_id}`,
+                        product_id: item.product_id,
+                        product_variation_id: item.product_variation_id,
+                        name: item.product?.name || 'Product',
+                        unit_price: Number(item.unit_price) || 0,
+                        quantity: item.quantity,
+                        discount_amount: Number(item.discount_amount) || 0,
+                        tax: Number(item.product?.tax_percentage) || 0,
+                        image_url: item.product?.image_url || ''
+                    }))
+                }));
+                setHeldCarts(mapped);
+            })
+            .catch(err => {
+                console.error("Error fetching held sales:", err);
+            });
+    };
+
+    // Load held carts on branch resolution
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('pos_held_carts');
-            if (saved) {
-                setHeldCarts(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.error("Failed to read held carts from localStorage", e);
-        }
-    }, []);
+        fetchHeldSales();
+    }, [resolvedBranchId]);
 
     // Calculate cart values
     const getCartSubtotal = () => {
@@ -280,6 +307,20 @@ export default function POS() {
     const handleClearCart = () => {
         if (cart.length === 0) return;
         if (window.confirm('Are you sure you want to clear the current transaction?')) {
+            if (resumedSaleId) {
+                setLoadingProducts(true);
+                axios.delete(`/api/pos/sales/${resumedSaleId}`)
+                    .then(() => {
+                        setResumedSaleId(null);
+                        fetchHeldSales();
+                    })
+                    .catch(err => {
+                        console.error("Failed to delete draft sale:", err);
+                    })
+                    .finally(() => {
+                        setLoadingProducts(false);
+                    });
+            }
             setCart([]);
             setCartDiscount(0);
             setCartNotes('');
@@ -292,28 +333,47 @@ export default function POS() {
         const note = prompt('Enter a reference/name for this suspended order:', `Order ${heldCarts.length + 1}`);
         if (note === null) return; // cancelled prompt
 
-        const newHeldCart = {
-            id: Date.now(),
-            reference: note || `Quick Order`,
-            branchName: activeBranch,
-            branchId: resolvedBranchId,
-            items: cart,
-            discount: cartDiscount,
-            discountType: cartDiscountType,
-            notes: cartNotes,
-            timestamp: new Date().toLocaleString(),
-            total: getCartTotal()
+        setLoadingProducts(true);
+
+        const createHold = () => {
+            const payload = {
+                branch_id: resolvedBranchId,
+                notes: cartNotes || note || `Quick Order`,
+                items: cart.map(item => ({
+                    product_id: item.product_id,
+                    product_variation_id: item.product_variation_id || null,
+                    quantity: item.quantity
+                }))
+            };
+
+            return axios.post('/api/pos/sales', payload)
+                .then(res => {
+                    const saleId = res.data.id;
+                    return axios.patch(`/api/pos/sales/${saleId}/hold`);
+                });
         };
 
-        const updated = [newHeldCart, ...heldCarts];
-        setHeldCarts(updated);
-        localStorage.setItem('pos_held_carts', JSON.stringify(updated));
-        
-        // Reset active cart
-        setCart([]);
-        setCartDiscount(0);
-        setCartNotes('');
-        alert('Cart suspended successfully!');
+        const deletePromise = resumedSaleId 
+            ? axios.delete(`/api/pos/sales/${resumedSaleId}`)
+            : Promise.resolve();
+
+        deletePromise
+            .then(() => createHold())
+            .then(() => {
+                alert('Cart suspended successfully on server!');
+                setCart([]);
+                setCartDiscount(0);
+                setCartNotes('');
+                setResumedSaleId(null);
+                fetchHeldSales();
+            })
+            .catch(err => {
+                console.error("Suspend error:", err);
+                alert(err.response?.data?.message || "Failed to suspend cart.");
+            })
+            .finally(() => {
+                setLoadingProducts(false);
+            });
     };
 
     // Resume a held cart
@@ -323,24 +383,42 @@ export default function POS() {
             if (!overwrite) return;
         }
 
-        setCart(held.items);
-        setCartDiscount(held.discount);
-        setCartDiscountType(held.discountType || 'flat');
-        setCartNotes(held.notes || '');
-        
-        // Remove from held carts list
-        const updated = heldCarts.filter(c => c.id !== held.id);
-        setHeldCarts(updated);
-        localStorage.setItem('pos_held_carts', JSON.stringify(updated));
-        setShowHeldCartsModal(false);
+        setLoadingProducts(true);
+        axios.patch(`/api/pos/sales/${held.id}/resume`)
+            .then(() => {
+                setCart(held.items);
+                setCartDiscount(held.discount);
+                setCartDiscountType(held.discountType || 'flat');
+                setCartNotes(held.notes || '');
+                setResumedSaleId(held.id);
+                setShowHeldCartsModal(false);
+                fetchHeldSales();
+            })
+            .catch(err => {
+                console.error("Resume error:", err);
+                alert(err.response?.data?.message || "Failed to resume cart.");
+            })
+            .finally(() => {
+                setLoadingProducts(false);
+            });
     };
 
     const handleDeleteHeldCart = (e, heldId) => {
         e.stopPropagation();
-        if (window.confirm('Delete this suspended cart?')) {
-            const updated = heldCarts.filter(c => c.id !== heldId);
-            setHeldCarts(updated);
-            localStorage.setItem('pos_held_carts', JSON.stringify(updated));
+        if (window.confirm('Delete this suspended cart from database?')) {
+            setLoadingProducts(true);
+            axios.delete(`/api/pos/sales/${heldId}`)
+                .then(() => {
+                    alert('Suspended cart deleted successfully!');
+                    fetchHeldSales();
+                })
+                .catch(err => {
+                    console.error("Delete error:", err);
+                    alert(err.response?.data?.message || "Failed to delete suspended cart.");
+                })
+                .finally(() => {
+                    setLoadingProducts(false);
+                });
         }
     };
 
@@ -392,6 +470,7 @@ export default function POS() {
         const payload = {
             branch_id: resolvedBranchId,
             customer_id: selectedCustomerId || null,
+            resumed_sale_id: resumedSaleId || null,
             subtotal,
             discount_amount: discount,
             tax_amount: tax,
@@ -406,6 +485,7 @@ export default function POS() {
                     setLastCompletedSale(res.data.sale);
                     setCart([]);
                     setSelectedCustomerId('');
+                    setResumedSaleId(null);
                     setCartDiscount(0);
                     setCartNotes('');
                     setAmountTendered('');

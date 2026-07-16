@@ -136,5 +136,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Completion and receipt
         Route::post('pos/sales/{id}/complete', [PosController::class, 'complete']);
         Route::get('pos/sales/{id}/receipt', [PosController::class, 'receipt']);
+        Route::delete('pos/sales/{id}', [PosController::class, 'destroy']);
     });
 });

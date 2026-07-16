@@ -801,6 +801,7 @@ class PosController extends Controller
         $validated = $request->validate([
             'branch_id' => 'required|integer|exists:branches,id',
             'customer_id' => 'nullable|integer',
+            'resumed_sale_id' => 'nullable|integer|exists:sales,id',
             'subtotal' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
             'tax_amount' => 'required|numeric|min:0',
@@ -818,18 +819,33 @@ class PosController extends Controller
 
         \DB::beginTransaction();
         try {
-            // Create the Sale
-            $sale = \App\Models\Sale::create([
-                'branch_id' => $validated['branch_id'],
-                'user_id' => \Auth::id(),
-                'customer_id' => $validated['customer_id'] ?? null,
-                'status' => 'completed',
-                'subtotal' => $validated['subtotal'],
-                'discount_amount' => $validated['discount_amount'],
-                'tax_amount' => $validated['tax_amount'],
-                'total_amount' => $validated['total_amount'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
+            // Create or update the Sale
+            if (!empty($validated['resumed_sale_id'])) {
+                $sale = \App\Models\Sale::findOrFail($validated['resumed_sale_id']);
+                // Overwrite items
+                $sale->items()->delete();
+                $sale->update([
+                    'customer_id' => $validated['customer_id'] ?? null,
+                    'status' => 'completed',
+                    'subtotal' => $validated['subtotal'],
+                    'discount_amount' => $validated['discount_amount'],
+                    'tax_amount' => $validated['tax_amount'],
+                    'total_amount' => $validated['total_amount'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            } else {
+                $sale = \App\Models\Sale::create([
+                    'branch_id' => $validated['branch_id'],
+                    'user_id' => \Auth::id(),
+                    'customer_id' => $validated['customer_id'] ?? null,
+                    'status' => 'completed',
+                    'subtotal' => $validated['subtotal'],
+                    'discount_amount' => $validated['discount_amount'],
+                    'tax_amount' => $validated['tax_amount'],
+                    'total_amount' => $validated['total_amount'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
 
             // Save items and adjust stock
             foreach ($validated['items'] as $item) {
@@ -889,5 +905,20 @@ class PosController extends Controller
                 'message' => 'Failed to process checkout: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function destroy($saleId)
+    {
+        $sale = \App\Models\Sale::findOrFail($saleId);
+
+        $error = $this->ensureStatusIn($sale, ['draft', 'held'], 'Only draft or held sales can be deleted.');
+        if ($error) {
+            return $error;
+        }
+
+        $sale->items()->delete();
+        $sale->delete();
+
+        return response()->json(['success' => true, 'message' => 'Suspended sale deleted successfully']);
     }
 }
