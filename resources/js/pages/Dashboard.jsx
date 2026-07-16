@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import PageWrapper from '../components/PageWrapper';
 import { useAuth } from '../context/AuthContext';
-import { 
-    Users, Shield, Key, GitBranch, ArrowUpRight, 
-    RefreshCw, Calendar, MapPin, Building, Globe, 
-    Settings as SettingsIcon, ShieldCheck, CheckCircle2, Circle
+import {
+    Users, Shield, Key, GitBranch, ArrowUpRight,
+    RefreshCw, Calendar, MapPin, Building, Globe,
+    Settings as SettingsIcon, ShieldCheck, CheckCircle2, Circle,
+    AlertCircle
 } from 'lucide-react';
 import { Skeleton } from '../components/Skeleton';
 
@@ -27,9 +28,11 @@ export default function Dashboard() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [error, setError] = useState(null);
 
     const fetchDashboardData = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const [usersRes, rolesRes, permsRes, branchesRes, settingsRes] = await Promise.all([
                 axios.get('/api/users'),
@@ -52,43 +55,8 @@ export default function Dashboard() {
                 }
             });
         } catch (err) {
-            console.warn('API error loading dashboard data, using simulated fallbacks.', err);
-            
-            // Fallbacks in case APIs fail
-            const fallbackRoles = [
-                { id: 1, name: 'admin', display_name: 'Administrator' },
-                { id: 2, name: 'cashier', display_name: 'Store Cashier' },
-                { id: 3, name: 'accountant', display_name: 'Lead Accountant' }
-            ];
-
-            const fallbackUsers = [
-                { id: 1, name: 'Admin User', email: 'admin@pos-erp.test', is_active: true, roles: [fallbackRoles[0]] },
-                { id: 2, name: 'Sarah Cashier', email: 'cashier@pos-erp.test', is_active: true, roles: [fallbackRoles[1]] },
-                { id: 3, name: 'Michael Accountant', email: 'accountant@pos-erp.test', is_active: false, roles: [fallbackRoles[2]] }
-            ];
-
-            const fallbackPerms = [
-                { id: 1, name: 'manage_users' }, { id: 2, name: 'manage_roles' }, { id: 3, name: 'manage_permissions' }
-            ];
-
-            const fallbackBranches = [
-                { id: 1, name: 'Main Corporate Branch', address: '100 Innovation Way', is_active: true },
-                { id: 2, name: 'Downtown Outlet', address: '452 Broadway Ave', is_active: true },
-                { id: 3, name: 'Northside Warehouse', address: '88 Logistics Blvd', is_active: false }
-            ];
-
-            setData({
-                users: fallbackUsers,
-                roles: fallbackRoles,
-                permissions: fallbackPerms,
-                branches: fallbackBranches,
-                settings: {
-                    company_name: 'Enterprise Store Ltd',
-                    currency: 'USD',
-                    timezone: 'America/New_York',
-                    date_format: 'M d, Y'
-                }
-            });
+            console.error('Failed to load dashboard data.', err);
+            setError(err.response?.data?.message || 'Failed to load dashboard data. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -168,7 +136,14 @@ export default function Dashboard() {
             actions={actions}
         >
             <div className="space-y-6">
-                
+
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                        <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                )}
+
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {stats.map((stat, idx) => {

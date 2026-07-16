@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\Inventory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,6 +30,8 @@ class BranchController extends Controller
         ]);
 
         $branch = Branch::create($data + ['is_active' => $data['is_active'] ?? true]);
+
+        Inventory::ensureForBranch($branch);
 
         return response()->json($branch, 201);
     }

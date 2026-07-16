@@ -8,10 +8,11 @@ import Filters from '../components/Filters';
 import { Input, Textarea, Checkbox, Select } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { 
-    FileText, Plus, Edit, Trash2, Search, ArrowUpRight, 
-    Truck, Calendar, User, CreditCard, ChevronLeft, 
-    AlertTriangle, CheckSquare, XCircle, ShoppingBag, Eye 
+import {
+    FileText, Plus, Edit, Trash2, Search, ArrowUpRight,
+    Truck, Calendar, User, CreditCard, ChevronLeft,
+    AlertTriangle, CheckSquare, XCircle, ShoppingBag, Eye,
+    AlertCircle
 } from 'lucide-react';
 
 // Custom Searchable Dropdown Selection Component
@@ -197,97 +198,8 @@ export default function PurchaseOrders() {
             setTotalPages(response.data.last_page);
             setTotalRecords(response.data.total);
         } catch (err) {
-            console.warn('API error, loading simulated purchase orders.', err);
-            
-            // Fallback mock purchase orders
-            const fallbackPOs = [
-                {
-                    id: 10023,
-                    supplier_id: 1,
-                    supplier: { id: 1, name: 'Sarah Connor', company_name: 'Cyberdyne Systems Supply' },
-                    user: { name: 'Admin User' },
-                    status: 'received',
-                    status_label: 'Received',
-                    notes: 'Initial bulk order for metal plating.',
-                    total_amount: 1450.00,
-                    created_at: '2026-06-18T14:22:00.000000Z',
-                    items: [
-                        {
-                            id: 1,
-                            product_id: 1,
-                            product: { name: 'Titanium Rod 10mm' },
-                            product_variation_id: null,
-                            variation: null,
-                            quantity_ordered: 10,
-                            quantity_received: 10,
-                            unit_cost: 145.00,
-                            total_cost: 1450.00
-                        }
-                    ]
-                },
-                {
-                    id: 10041,
-                    supplier_id: 2,
-                    supplier: { id: 2, name: 'Bruce Wayne', company_name: 'Wayne Enterprises Logistics' },
-                    user: { name: 'Sarah Cashier' },
-                    status: 'ordered',
-                    status_label: 'Ordered',
-                    notes: 'Awaiting shipping confirmation.',
-                    total_amount: 2500.00,
-                    created_at: '2026-07-02T11:05:00.000000Z',
-                    items: [
-                        {
-                            id: 2,
-                            product_id: 2,
-                            product: { name: 'Carbon Fiber Plating' },
-                            product_variation_id: 1,
-                            variation: { size: 'Large', color: 'Black' },
-                            quantity_ordered: 25,
-                            quantity_received: 0,
-                            unit_cost: 100.00,
-                            total_cost: 2500.00
-                        }
-                    ]
-                },
-                {
-                    id: 10058,
-                    supplier_id: 1,
-                    supplier: { id: 1, name: 'Sarah Connor', company_name: 'Cyberdyne Systems Supply' },
-                    user: { name: 'Admin User' },
-                    status: 'draft',
-                    status_label: 'Draft',
-                    notes: 'Draft order for review.',
-                    total_amount: 890.50,
-                    created_at: '2026-07-09T09:12:00.000000Z',
-                    items: [
-                        {
-                            id: 3,
-                            product_id: 3,
-                            product: { name: 'Microprocessor T-800' },
-                            product_variation_id: null,
-                            variation: null,
-                            quantity_ordered: 2,
-                            quantity_received: 0,
-                            unit_cost: 445.25,
-                            total_cost: 890.50
-                        }
-                    ]
-                }
-            ];
-
-            // Filter locally for mock testing
-            let filteredMock = fallbackPOs.filter(po => {
-                const matchesSearch = po.supplier.company_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                      po.supplier.name.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
-                const matchesSupplier = supplierFilter === 'all' || po.supplier_id === Number(supplierFilter);
-                const matchesProduct = productFilter === 'all' || (po.items && po.items.some(item => item.product_id === Number(productFilter)));
-                return matchesSearch && matchesStatus && matchesSupplier && matchesProduct;
-            });
-
-            setPurchaseOrders(filteredMock);
-            setTotalPages(1);
-            setTotalRecords(filteredMock.length);
+            console.error('Failed to fetch purchase orders.', err);
+            setError(err.response?.data?.message || 'Failed to load purchase orders. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -304,39 +216,8 @@ export default function PurchaseOrders() {
             setProducts(productsRes.data.data || []);
             setBranches(branchesRes.data.data || []);
         } catch (err) {
-            console.warn('API error fetching dropdown catalogs. Loading simulated mock catalogs.', err);
-            setSuppliers([
-                { id: 1, name: 'Sarah Connor', company_name: 'Cyberdyne Systems Supply', is_active: true },
-                { id: 2, name: 'Bruce Wayne', company_name: 'Wayne Enterprises Logistics', is_active: true },
-                { id: 3, name: 'Walter White', company_name: 'A1A Chemicals Corp', is_active: false }
-            ]);
-            setProducts([
-                { 
-                    id: 1, 
-                    name: 'Titanium Rod 10mm', 
-                    cost_price: 145.00,
-                    variations: []
-                },
-                { 
-                    id: 2, 
-                    name: 'Carbon Fiber Plating', 
-                    cost_price: 100.00,
-                    variations: [
-                        { id: 1, size: 'Large', color: 'Black', cost_price: 100.00 },
-                        { id: 2, size: 'Medium', color: 'Gray', cost_price: 85.00 }
-                    ]
-                },
-                { 
-                    id: 3, 
-                    name: 'Microprocessor T-800', 
-                    cost_price: 445.25,
-                    variations: []
-                }
-            ]);
-            setBranches([
-                { id: 1, name: 'Downtown HQ', is_active: true },
-                { id: 2, name: 'Westside Outlet', is_active: true }
-            ]);
+            console.error('Failed to fetch dropdown catalogs.', err);
+            setError(err.response?.data?.message || 'Failed to load suppliers/products/branches catalogs. Please try again.');
         }
     };
 
@@ -524,63 +405,12 @@ export default function PurchaseOrders() {
             }
             setFormOpen(false);
         } catch (err) {
-            console.warn('API error, using simulated local state update for save.', err);
-
-            // Calculate total sum locally
-            const calculatedTotal = formItems.reduce((sum, item) => sum + (Number(item.quantity_ordered) * parseFloat(item.unit_cost)), 0);
-            const sup = suppliers.find(s => s.id === Number(formSupplierId)) || { name: 'Sarah Connor', company_name: 'Cyberdyne Systems Supply' };
-            
-            // Build items with names
-            const hydratedItems = formItems.map((item, idx) => {
-                const prod = products.find(p => p.id === Number(item.product_id)) || { name: 'Custom Product' };
-                let vari = null;
-                if (item.product_variation_id && prod.variations) {
-                    vari = prod.variations.find(v => v.id === Number(item.product_variation_id));
-                }
-                return {
-                    id: item.id || Date.now() + idx,
-                    product_id: item.product_id,
-                    product: { name: prod.name },
-                    product_variation_id: item.product_variation_id || null,
-                    variation: vari ? { size: vari.size, color: vari.color } : null,
-                    quantity_ordered: item.quantity_ordered,
-                    quantity_received: 0,
-                    unit_cost: item.unit_cost,
-                    total_cost: item.quantity_ordered * item.unit_cost
-                };
-            });
-
-            if (currentPO) {
-                const updatedSimulated = {
-                    ...currentPO,
-                    supplier_id: Number(formSupplierId),
-                    supplier: sup,
-                    notes: formNotes,
-                    status: formStatus,
-                    status_label: formStatus.charAt(0).toUpperCase() + formStatus.slice(1),
-                    total_amount: calculatedTotal,
-                    items: hydratedItems
-                };
-                setPurchaseOrders(purchaseOrders.map(po => po.id === currentPO.id ? updatedSimulated : po));
-                if (viewingPO && viewingPO.id === currentPO.id) {
-                    setViewingPO(updatedSimulated);
-                }
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimulated = {
-                    id: Date.now() % 100000,
-                    supplier_id: Number(formSupplierId),
-                    supplier: sup,
-                    user: { name: 'Admin User' },
-                    notes: formNotes,
-                    status: formStatus,
-                    status_label: formStatus.charAt(0).toUpperCase() + formStatus.slice(1),
-                    total_amount: calculatedTotal,
-                    created_at: new Date().toISOString(),
-                    items: hydratedItems
-                };
-                setPurchaseOrders([newSimulated, ...purchaseOrders]);
+                console.error('Failed to save purchase order.', err);
+                alert(err.response?.data?.message || 'Failed to save purchase order. Please try again.');
             }
-            setFormOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -596,16 +426,8 @@ export default function PurchaseOrders() {
                 setViewingPO(updated);
             }
         } catch (err) {
-            console.warn('API error, performing simulated status transition.', err);
-            const updatedSimulated = {
-                ...po,
-                status: newStatus,
-                status_label: newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
-            };
-            setPurchaseOrders(purchaseOrders.map(p => p.id === po.id ? updatedSimulated : p));
-            if (viewingPO && viewingPO.id === po.id) {
-                setViewingPO(updatedSimulated);
-            }
+            console.error('Failed to transition purchase order status.', err);
+            alert(err.response?.data?.message || 'Failed to update purchase order status. Please try again.');
         }
     };
 
@@ -626,11 +448,8 @@ export default function PurchaseOrders() {
                 setViewingPO(null);
             }
         } catch (err) {
-            console.warn('API error, performing simulated delete.', err);
-            setPurchaseOrders(purchaseOrders.filter(po => po.id !== currentPO.id));
-            if (viewingPO && viewingPO.id === currentPO.id) {
-                setViewingPO(null);
-            }
+            console.error('Failed to delete purchase order.', err);
+            alert(err.response?.data?.message || 'Failed to delete purchase order. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -706,33 +525,8 @@ export default function PurchaseOrders() {
             }
             setIsReceiving(false);
         } catch (err) {
-            console.warn('API error, performing simulated stock receive.', err);
-
-            // Construct new received state locally
-            const updatedItems = currentPO.items.map(item => {
-                const receivedQty = parseInt(receiveQuantities[item.id] || 0);
-                return {
-                    ...item,
-                    quantity_received: Math.min(item.quantity_ordered, item.quantity_received + receivedQty)
-                };
-            });
-
-            const allRec = updatedItems.every(i => i.quantity_received >= i.quantity_ordered);
-            const anyRec = updatedItems.sum ? updatedItems.sum(i => i.quantity_received) > 0 : true; // default state transitions to received or partially received
-            const nextStatus = allRec ? 'received' : 'partially_received';
-
-            const updatedSimulated = {
-                ...currentPO,
-                status: nextStatus,
-                status_label: nextStatus.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-                items: updatedItems
-            };
-
-            setPurchaseOrders(purchaseOrders.map(p => p.id === currentPO.id ? updatedSimulated : p));
-            if (viewingPO && viewingPO.id === currentPO.id) {
-                setViewingPO(updatedSimulated);
-            }
-            setIsReceiving(false);
+            console.error('Failed to submit stock receipt.', err);
+            setReceiveErrors({ general: err.response?.data?.message || 'Failed to record stock receipt. Please try again.' });
         } finally {
             setSubmitting(false);
         }
@@ -951,6 +745,12 @@ export default function PurchaseOrders() {
 
     return (
         <div className="space-y-6">
+            {error && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                    <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                    <span className="font-semibold">{error}</span>
+                </div>
+            )}
             {!viewingPO ? (
                 // LIST VIEW
                 <PageWrapper

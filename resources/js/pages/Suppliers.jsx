@@ -8,10 +8,10 @@ import Filters from '../components/Filters';
 import { Input, Textarea, Checkbox } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { 
-    Truck, Plus, Edit, Trash2, ToggleLeft, ToggleRight, 
-    Search, Mail, Phone, MapPin, FileText, ChevronLeft, 
-    Building, AlertCircle, Calendar, CreditCard, RefreshCw 
+import {
+    Truck, Plus, Edit, Trash2, ToggleLeft, ToggleRight,
+    Search, Mail, Phone, MapPin, FileText, ChevronLeft,
+    Building, AlertCircle, Calendar, CreditCard, RefreshCw
 } from 'lucide-react';
 
 export default function Suppliers() {
@@ -67,63 +67,8 @@ export default function Suppliers() {
             setTotalPages(response.data.last_page);
             setTotalRecords(response.data.total);
         } catch (err) {
-            console.warn('API error, loading simulated fallback suppliers.', err);
-            
-            // Fallback mock suppliers
-            const fallbackSuppliers = [
-                {
-                    id: 1,
-                    name: 'Sarah Connor',
-                    company_name: 'Cyberdyne Systems Supply',
-                    email: 'sconnor@cyberdyne.test',
-                    phone: '+1 555-0199',
-                    address: '742 Evergreen Terrace, Springfield',
-                    balance: 1450.00,
-                    notes: 'Excellent reliability. Supplier of metal parts and microprocessors.',
-                    is_active: true,
-                    created_at: '2026-05-12T08:00:00.000000Z'
-                },
-                {
-                    id: 2,
-                    name: 'Bruce Wayne',
-                    company_name: 'Wayne Enterprises Logistics',
-                    email: 'bwayne@waynecorp.test',
-                    phone: '+1 555-9000',
-                    address: '1007 Mountain Drive, Gotham City',
-                    balance: 0.00,
-                    notes: 'High-end shipping supplier. Bulk rates apply to electronic inventory.',
-                    is_active: true,
-                    created_at: '2026-06-01T10:30:00.000000Z'
-                },
-                {
-                    id: 3,
-                    name: 'Walter White',
-                    company_name: 'A1A Chemicals Corp',
-                    email: 'wwhite@a1achems.test',
-                    phone: '+1 555-4823',
-                    address: '308 Negra Arroyo Lane, Albuquerque',
-                    balance: 8900.50,
-                    notes: 'Urgent invoices pending. Key supplier for packaging labels and containers.',
-                    is_active: false,
-                    created_at: '2026-06-14T15:45:00.000000Z'
-                }
-            ];
-            
-            // Filter locally for mock testing
-            let filteredMock = fallbackSuppliers.filter(s => {
-                const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                      (s.company_name && s.company_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                                      (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                                      (s.phone && s.phone.includes(searchQuery));
-                const matchesStatus = statusFilter === 'all' || 
-                                      (statusFilter === 'active' && s.is_active) || 
-                                      (statusFilter === 'inactive' && !s.is_active);
-                return matchesSearch && matchesStatus;
-            });
-
-            setSuppliers(filteredMock);
-            setTotalPages(1);
-            setTotalRecords(filteredMock.length);
+            console.error('Failed to fetch suppliers.', err);
+            setError(err.response?.data?.message || 'Failed to load suppliers. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -138,48 +83,8 @@ export default function Suppliers() {
             });
             setSupplierOrders(response.data.data || []);
         } catch (err) {
-            console.warn('API error fetching supplier purchase orders. Loading simulated orders.', err);
-            
-            // Generate some mock orders for this supplier
-            const generatedMockOrders = [
-                {
-                    id: 10023,
-                    supplier_id: supplierId,
-                    total_amount: 1450.00,
-                    status: 'received',
-                    status_label: 'Received',
-                    created_at: '2026-06-18T14:22:00.000000Z',
-                    user: { name: 'Admin User' }
-                },
-                {
-                    id: 10041,
-                    supplier_id: supplierId,
-                    total_amount: 2500.00,
-                    status: 'ordered',
-                    status_label: 'Ordered',
-                    created_at: '2026-07-02T11:05:00.000000Z',
-                    user: { name: 'Sarah Cashier' }
-                },
-                {
-                    id: 10058,
-                    supplier_id: supplierId,
-                    total_amount: 890.50,
-                    status: 'draft',
-                    status_label: 'Draft',
-                    created_at: '2026-07-09T09:12:00.000000Z',
-                    user: { name: 'Admin User' }
-                }
-            ];
-
-            // If the supplier has zero balance, maybe mock all received
-            if (supplierId === 2) {
-                generatedMockOrders[1].status = 'received';
-                generatedMockOrders[1].status_label = 'Received';
-                generatedMockOrders[2].status = 'cancelled';
-                generatedMockOrders[2].status_label = 'Cancelled';
-            }
-
-            setSupplierOrders(generatedMockOrders);
+            console.error('Failed to fetch supplier purchase orders.', err);
+            setError(err.response?.data?.message || 'Failed to load purchase orders for this supplier. Please try again.');
         } finally {
             setLoadingOrders(false);
         }
@@ -260,12 +165,8 @@ export default function Suppliers() {
                 setViewingSupplier({ ...viewingSupplier, is_active: updated.is_active });
             }
         } catch (err) {
-            console.warn('API error, performing simulated status toggle.', err);
-            const toggleActive = !supplier.is_active;
-            setSuppliers(suppliers.map(s => s.id === supplier.id ? { ...s, is_active: toggleActive } : s));
-            if (viewingSupplier && viewingSupplier.id === supplier.id) {
-                setViewingSupplier({ ...viewingSupplier, is_active: toggleActive });
-            }
+            console.error('Failed to toggle supplier status.', err);
+            alert(err.response?.data?.message || 'Failed to update supplier status. Please try again.');
         }
     };
 
@@ -313,27 +214,12 @@ export default function Suppliers() {
             }
             setModalOpen(false);
         } catch (err) {
-            console.warn('API error saving supplier, using local simulated save.', err);
-            
-            if (currentSupplier) {
-                const updatedSimulated = {
-                    ...currentSupplier,
-                    ...payload,
-                    balance: parseFloat(formBalance || 0)
-                };
-                setSuppliers(suppliers.map(s => s.id === currentSupplier.id ? updatedSimulated : s));
-                if (viewingSupplier && viewingSupplier.id === currentSupplier.id) {
-                    setViewingSupplier(updatedSimulated);
-                }
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimulated = {
-                    id: Date.now(),
-                    ...payload,
-                    created_at: new Date().toISOString()
-                };
-                setSuppliers([...suppliers, newSimulated]);
+                console.error('Failed to save supplier.', err);
+                alert(err.response?.data?.message || 'Failed to save supplier. Please try again.');
             }
-            setModalOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -350,11 +236,8 @@ export default function Suppliers() {
                 setViewingSupplier(null);
             }
         } catch (err) {
-            console.warn('API error deleting supplier, using simulated local state update.', err);
-            setSuppliers(suppliers.filter(s => s.id !== currentSupplier.id));
-            if (viewingSupplier && viewingSupplier.id === currentSupplier.id) {
-                setViewingSupplier(null);
-            }
+            console.error('Failed to delete supplier.', err);
+            alert(err.response?.data?.message || 'Failed to delete supplier. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -555,6 +438,12 @@ export default function Suppliers() {
 
     return (
         <div className="space-y-6">
+            {error && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                    <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                    <span className="font-semibold">{error}</span>
+                </div>
+            )}
             {!viewingSupplier ? (
                 // LIST VIEW
                 <PageWrapper

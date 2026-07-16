@@ -44,37 +44,8 @@ export default function Settings() {
                 date_formats: configRes.data.date_formats || []
             });
         } catch (err) {
-            console.warn('API error, loading simulated config and settings fallback.', err);
-            
-            // Fallback Settings
-            setSettings({
-                currency: 'USD',
-                timezone: 'America/New_York',
-                date_format: 'M d, Y'
-            });
-
-            // Fallback Config
-            setConfig({
-                currencies: [
-                    { code: 'USD', name: 'US Dollar', symbol: '$' },
-                    { code: 'EUR', name: 'Euro', symbol: '€' },
-                    { code: 'GBP', name: 'British Pound', symbol: '£' },
-                    { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
-                    { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' }
-                ],
-                timezones: [
-                    'UTC', 'America/New_York', 'Europe/London', 'Europe/Paris', 
-                    'Asia/Beirut', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Istanbul'
-                ],
-                date_formats: [
-                    { format: 'Y-m-d', example: '2026-06-26' },
-                    { format: 'd/m/Y', example: '26/06/2026' },
-                    { format: 'm/d/Y', example: '06/26/2026' },
-                    { format: 'd-m-Y', example: '26-06-2026' },
-                    { format: 'M d, Y', example: 'Jun 26, 2026' },
-                    { format: 'd M Y', example: '26 Jun 2026' }
-                ]
-            });
+            console.error('Failed to load settings/config.', err);
+            setError(err.response?.data?.message || 'Failed to load system settings. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -109,9 +80,8 @@ export default function Settings() {
             setSuccessMessage('System configurations updated successfully.');
             setTimeout(() => setSuccessMessage(''), 4000);
         } catch (err) {
-            console.warn('API error, performing simulated update.', err);
-            setSuccessMessage('Settings updated successfully (simulated fallback).');
-            setTimeout(() => setSuccessMessage(''), 4000);
+            console.error('Failed to update settings.', err);
+            setError(err.response?.data?.message || 'Failed to update settings. Please try again.');
         } finally {
             setIsSaving(false);
         }

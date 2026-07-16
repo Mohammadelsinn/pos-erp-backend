@@ -167,7 +167,7 @@ export default function DamagedLostStock() {
             const payload = {
                 branch_id: selectedBranch,
                 product_id: selectedProduct,
-                type: 'decrement',
+                type: reportType,
                 quantity: qty,
                 reason: `${reportName}: ${notes.trim()}`
             };

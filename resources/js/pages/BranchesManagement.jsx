@@ -8,7 +8,7 @@ import Filters from '../components/Filters';
 import { Input, Textarea, Checkbox } from '../components/FormControls';
 import { Skeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { Plus, Edit, Trash2, MapPin, Phone, Mail, ToggleLeft, ToggleRight, GitBranch, ShieldAlert } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Phone, Mail, ToggleLeft, ToggleRight, GitBranch, ShieldAlert, AlertCircle } from 'lucide-react';
 
 export default function BranchesManagement() {
     const [branches, setBranches] = useState([]);
@@ -41,15 +41,8 @@ export default function BranchesManagement() {
             const response = await axios.get('/api/branches');
             setBranches(response.data);
         } catch (err) {
-            console.warn('API error, loading simulated fallback mock data.', err);
-            
-            // Fallback mock branches
-            const fallbackBranches = [
-                { id: 1, name: 'Main Corporate Branch', address: '100 Innovation Way, Suite 400, Tech District', phone: '+1 (555) 019-2831', email: 'main@pos-erp.test', is_active: true },
-                { id: 2, name: 'Downtown Outlet', address: '452 Broadway Ave, Retail Hub', phone: '+1 (555) 019-8833', email: 'downtown@pos-erp.test', is_active: true },
-                { id: 3, name: 'Northside Warehouse', address: '88 Logistics Blvd, Sector C', phone: '+1 (555) 019-4477', email: 'northside@pos-erp.test', is_active: false }
-            ];
-            setBranches(fallbackBranches);
+            console.error('Failed to fetch branches.', err);
+            setError(err.response?.data?.message || 'Failed to load branches. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -113,8 +106,8 @@ export default function BranchesManagement() {
             const response = await axios.patch(`/api/branches/${branch.id}/toggle-status`);
             setBranches(branches.map(b => b.id === branch.id ? { ...b, is_active: response.data.branch.is_active } : b));
         } catch (err) {
-            console.warn('API error, performing simulated status toggle.', err);
-            setBranches(branches.map(b => b.id === branch.id ? { ...b, is_active: !b.is_active } : b));
+            console.error('Failed to toggle branch status.', err);
+            alert(err.response?.data?.message || 'Failed to update branch status. Please try again.');
         }
     };
 
@@ -151,22 +144,12 @@ export default function BranchesManagement() {
             }
             setModalOpen(false);
         } catch (err) {
-            console.warn('API error, performing simulated branch save.', err);
-
-            // Simulated Save
-            if (currentBranch) {
-                setBranches(branches.map(b => b.id === currentBranch.id ? {
-                    ...b,
-                    ...payload
-                } : b));
+            if (err.response?.status === 422) {
+                setFormErrors(err.response.data.errors || {});
             } else {
-                const newSimBranch = {
-                    id: Date.now(),
-                    ...payload
-                };
-                setBranches([...branches, newSimBranch]);
+                console.error('Failed to save branch.', err);
+                alert(err.response?.data?.message || 'Failed to save branch. Please try again.');
             }
-            setModalOpen(false);
         } finally {
             setSubmitting(false);
         }
@@ -180,8 +163,8 @@ export default function BranchesManagement() {
             await axios.delete(`/api/branches/${currentBranch.id}`);
             setBranches(branches.filter(b => b.id !== currentBranch.id));
         } catch (err) {
-            console.warn('API error, performing simulated branch delete.', err);
-            setBranches(branches.filter(b => b.id !== currentBranch.id));
+            console.error('Failed to delete branch.', err);
+            alert(err.response?.data?.message || 'Failed to delete branch. Please try again.');
         } finally {
             setSubmitting(false);
             setDeleteModalOpen(false);
@@ -292,7 +275,14 @@ export default function BranchesManagement() {
             actions={actions}
         >
             <div className="space-y-6">
-                
+
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2.5">
+                        <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                        <span className="font-semibold">{error}</span>
+                    </div>
+                )}
+
                 {/* Search */}
                 <Filters
                     searchPlaceholder="Search branch by name, address or email..."
