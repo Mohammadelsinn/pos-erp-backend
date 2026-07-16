@@ -800,6 +800,7 @@ class PosController extends Controller
     {
         $validated = $request->validate([
             'branch_id' => 'required|integer|exists:branches,id',
+            'customer_id' => 'nullable|integer',
             'subtotal' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
             'tax_amount' => 'required|numeric|min:0',
@@ -821,6 +822,7 @@ class PosController extends Controller
             $sale = \App\Models\Sale::create([
                 'branch_id' => $validated['branch_id'],
                 'user_id' => \Auth::id(),
+                'customer_id' => $validated['customer_id'] ?? null,
                 'status' => 'completed',
                 'subtotal' => $validated['subtotal'],
                 'discount_amount' => $validated['discount_amount'],

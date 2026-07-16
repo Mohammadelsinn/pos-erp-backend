@@ -8,9 +8,16 @@ import {
     Search, ShoppingCart, Trash2, Tag, Percent, 
     CreditCard, DollarSign, Wallet, FileText, CheckCircle2, 
     ChevronRight, Construction, AlertCircle, Eye, Printer, 
-    Plus, Minus, RefreshCw, Layers, Archive, History, Bookmark
+    Plus, Minus, RefreshCw, Layers, Archive, History, Bookmark, User
 } from 'lucide-react';
 import StockStatusBadge from '../components/StockStatusBadge';
+
+const MOCK_CUSTOMERS = [
+    { id: 1, name: 'Walk-in Customer', email: 'walkin@example.com', phone: 'N/A' },
+    { id: 2, name: 'John Doe', email: 'john@example.com', phone: '+123456789' },
+    { id: 3, name: 'Jane Smith', email: 'jane@example.com', phone: '+987654321' },
+    { id: 4, name: 'Alice Johnson', email: 'alice@example.com', phone: '+112233445' }
+];
 
 export default function POS() {
     const { activeBranch } = useAuth();
@@ -31,6 +38,7 @@ export default function POS() {
     
     // Cart state
     const [cart, setCart] = useState([]);
+    const [selectedCustomerId, setSelectedCustomerId] = useState(1);
     const [cartDiscount, setCartDiscount] = useState(0); // flat discount amount or percentage
     const [cartDiscountType, setCartDiscountType] = useState('flat'); // 'flat' or 'percent'
     const [cartNotes, setCartNotes] = useState('');
@@ -384,6 +392,7 @@ export default function POS() {
 
         const payload = {
             branch_id: resolvedBranchId,
+            customer_id: selectedCustomerId,
             subtotal,
             discount_amount: discount,
             tax_amount: tax,
@@ -397,6 +406,7 @@ export default function POS() {
                 if (res.data.success) {
                     setLastCompletedSale(res.data.sale);
                     setCart([]);
+                    setSelectedCustomerId(1);
                     setCartDiscount(0);
                     setCartNotes('');
                     setAmountTendered('');
@@ -666,6 +676,25 @@ export default function POS() {
                                 <span className="text-sm font-extrabold text-indigo-400 font-mono">
                                     ${getCartTotal().toFixed(2)}
                                 </span>
+                            </div>
+                        </div>
+
+                        {/* Customer Selector Block */}
+                        <div className="px-5 py-3 border-b border-slate-800/80 bg-slate-955/40 flex items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-1.5 text-slate-450 font-bold uppercase tracking-wider text-[10px]">
+                                <User className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Customer</span>
+                            </div>
+                            <div className="flex-1 max-w-[200px]">
+                                <select
+                                    value={selectedCustomerId}
+                                    onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
+                                    className="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-slate-200 outline-none focus:border-indigo-500 font-semibold"
+                                >
+                                    {MOCK_CUSTOMERS.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
