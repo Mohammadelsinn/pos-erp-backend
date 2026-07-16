@@ -1127,6 +1127,29 @@ export default function POS() {
 
                         <form onSubmit={handleCheckoutSubmit} className="p-5 space-y-4">
                             
+                            {/* Order & Customer Summary */}
+                            <div className="bg-slate-950/50 border border-slate-850/80 rounded-xl p-3.5 space-y-2.5 max-h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-850 scrollbar-track-transparent">
+                                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <span>Selected Customer</span>
+                                    <span className="text-indigo-400 font-semibold normal-case">
+                                        {selectedCustomerId ? MOCK_CUSTOMERS.find(c => c.id === selectedCustomerId)?.name : 'Walk-in Customer'}
+                                    </span>
+                                </div>
+                                <div className="border-t border-slate-850/50 my-1"></div>
+                                <div className="space-y-1.5">
+                                    {cart.map(item => (
+                                        <div key={item.cartId} className="flex justify-between text-xs font-semibold text-slate-350">
+                                            <span className="truncate max-w-[200px]">
+                                                {item.name} <span className="text-slate-500 font-bold">x{item.quantity}</span>
+                                            </span>
+                                            <span className="font-mono text-slate-250">
+                                                ${((item.unit_price - (item.discount_amount || 0)) * item.quantity).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Billing summary */}
                             <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-xl flex justify-between items-center">
                                 <span className="text-xs font-bold text-slate-400">Total Amount Due</span>
@@ -1169,7 +1192,7 @@ export default function POS() {
 
                             {/* Amount Tendered (Cash only) */}
                             {paymentMethod === 'cash' && (
-                                <div className="space-y-3.5 pt-1.5 border-t border-slate-850 animate-fade-in">
+                                <div className="space-y-3 pt-1.5 border-t border-slate-850 animate-fade-in">
                                     <Input
                                         label="Amount Tendered"
                                         type="number"
@@ -1181,6 +1204,28 @@ export default function POS() {
                                         placeholder="Enter cash received..."
                                         icon={DollarSign}
                                     />
+
+                                    {/* Quick Cash Options */}
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                            Quick Cash Options
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {[
+                                                { label: 'Exact Change', value: getCartTotal() },
+                                                ...[5, 10, 20, 50, 100].filter(val => val >= getCartTotal()).map(val => ({ label: `$${val}`, value: val }))
+                                            ].map((opt, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setAmountTendered(opt.value.toFixed(2))}
+                                                    className="px-2.5 py-1 text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700 hover:text-indigo-400 rounded-lg transition-colors active:scale-95"
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     
                                     {/* Change Calculations */}
                                     {Number(amountTendered) > 0 && (
