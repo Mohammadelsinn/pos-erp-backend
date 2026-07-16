@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inventory;
+use App\Models\InventoryAdjustment;
 use App\Models\Product;
 use App\Models\ProductVariation;
 use App\Models\Sale;
@@ -372,12 +373,9 @@ class PosController extends Controller
 
         $this->recalculateTotals($sale);
 
-        $itemDiscounts = $sale->items->sum('discount_amount');
-        $combinedDiscount = round($itemDiscounts + $sale->discount_amount, 2);
-
         return response()->json([
             'subtotal' => round($sale->subtotal, 2),
-            'discount_amount' => $combinedDiscount,
+            'discount_amount' => $this->combinedDiscount($sale),
             'tax_amount' => round($sale->tax_amount, 2),
             'grand_total' => round($sale->total_amount, 2),
         ]);
@@ -501,6 +499,116 @@ class PosController extends Controller
     }
 
     /**
+     * Complete a draft sale: validates stock for every line first (no partial writes),
+     * then deducts inventory, logs a stock movement per item, assigns an order number,
+     * and marks the sale completed.
+     */
+    public function complete($saleId)
+    {
+        $sale = Sale::with('items')->findOrFail($saleId);
+
+        if ($sale->status !== 'draft') {
+            return response()->json(['message' => 'Only draft sales can be completed.'], 422);
+        }
+
+        if ($sale->items->isEmpty()) {
+            return response()->json(['message' => 'Cannot complete a sale with no items.'], 422);
+        }
+
+        $errors = [];
+        foreach ($sale->items as $item) {
+            $available = Inventory::where('branch_id', $sale->branch_id)
+                ->where('product_id', $item->product_id)
+                ->where('product_variation_id', $item->product_variation_id)
+                ->value('quantity') ?? 0;
+
+            if ($item->quantity > $available) {
+                $errors[] = "Insufficient stock for item #{$item->id}: only {$available} available, {$item->quantity} requested.";
+            }
+        }
+
+        if (!empty($errors)) {
+            return response()->json(['message' => 'Insufficient stock for one or more items.', 'errors' => $errors], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($sale->items as $item) {
+                $inventory = Inventory::where('branch_id', $sale->branch_id)
+                    ->where('product_id', $item->product_id)
+                    ->where('product_variation_id', $item->product_variation_id)
+                    ->first();
+
+                $inventory->quantity = max(0, $inventory->quantity - $item->quantity);
+                $inventory->save();
+
+                InventoryAdjustment::create([
+                    'inventory_id' => $inventory->id,
+                    'product_id' => $item->product_id,
+                    'product_variation_id' => $item->product_variation_id,
+                    'branch_id' => $sale->branch_id,
+                    'user_id' => Auth::id(),
+                    'type' => 'out',
+                    'quantity' => -$item->quantity,
+                    'reason' => 'POS Sale #' . $sale->id,
+                    'reference_type' => Sale::class,
+                    'reference_id' => $sale->id,
+                ]);
+            }
+
+            $sale->order_number = $this->generateOrderNumber();
+            $sale->status = 'completed';
+            $sale->save();
+
+            DB::commit();
+
+            return response()->json($sale->load('items.product', 'items.variation'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to complete sale: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Printable/displayable receipt data for a completed sale.
+     */
+    public function receipt($saleId)
+    {
+        $sale = Sale::with(['items.product', 'items.variation', 'branch', 'user'])->findOrFail($saleId);
+
+        if ($sale->status !== 'completed') {
+            return response()->json(['message' => 'Receipt is only available for completed sales.'], 422);
+        }
+
+        $items = $sale->items->map(function ($item) {
+            return [
+                'product_name' => $item->product->name,
+                'variation_name' => $item->variation->name ?? null,
+                'quantity' => $item->quantity,
+                'unit_price' => round($item->unit_price, 2),
+                'discount_amount' => round($item->discount_amount, 2),
+                'tax_amount' => round($item->tax_amount, 2),
+                'total_price' => round($item->total_price, 2),
+            ];
+        })->values();
+
+        return response()->json([
+            'order_number' => $sale->order_number,
+            'items' => $items,
+            'subtotal' => round($sale->subtotal, 2),
+            'discount_amount' => $this->combinedDiscount($sale),
+            'tax_amount' => round($sale->tax_amount, 2),
+            'grand_total' => round($sale->total_amount, 2),
+            'customer' => [
+                'customer_id' => $sale->customer_id,
+            ],
+            'cashier_name' => $sale->user->name,
+            'branch_name' => $sale->branch->name,
+            'date' => $sale->updated_at,
+        ]);
+    }
+
+    /**
      * Remove an item from the cart and recalculate totals.
      */
     public function removeItem($saleId, $itemId)
@@ -559,6 +667,28 @@ class PosController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * ORD-{year}-{4-digit sequence}, sequence restarts each year based on how many
+     * order numbers already exist for that year.
+     */
+    private function generateOrderNumber(): string
+    {
+        $year = now()->format('Y');
+        $count = Sale::where('order_number', 'like', "ORD-{$year}-%")->lockForUpdate()->count();
+
+        return sprintf('ORD-%s-%04d', $year, $count + 1);
+    }
+
+    /**
+     * Total discount actually applied to a sale: item-level discounts plus the order-level one.
+     */
+    private function combinedDiscount(Sale $sale): float
+    {
+        $itemDiscounts = $sale->items->sum('discount_amount');
+
+        return round($itemDiscounts + $sale->discount_amount, 2);
     }
 
     private function unitPriceFor(int $productId, ?int $variationId): float

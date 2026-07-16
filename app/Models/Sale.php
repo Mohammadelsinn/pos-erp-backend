@@ -15,6 +15,7 @@ class Sale extends Model
         'user_id',
         'customer_id',
         'status',
+        'order_number',
         'subtotal',
         'discount_amount',
         'discount_percentage',
