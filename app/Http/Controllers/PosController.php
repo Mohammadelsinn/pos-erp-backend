@@ -802,6 +802,7 @@ class PosController extends Controller
             'branch_id' => 'required|integer|exists:branches,id',
             'customer_id' => 'nullable|integer',
             'resumed_sale_id' => 'nullable|integer|exists:sales,id',
+            'payment_method' => 'nullable|string',
             'subtotal' => 'required|numeric|min:0',
             'discount_amount' => 'required|numeric|min:0',
             'tax_amount' => 'required|numeric|min:0',
@@ -831,6 +832,7 @@ class PosController extends Controller
                     'discount_amount' => $validated['discount_amount'],
                     'tax_amount' => $validated['tax_amount'],
                     'total_amount' => $validated['total_amount'],
+                    'payment_method' => $validated['payment_method'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                 ]);
             } else {
@@ -843,6 +845,7 @@ class PosController extends Controller
                     'discount_amount' => $validated['discount_amount'],
                     'tax_amount' => $validated['tax_amount'],
                     'total_amount' => $validated['total_amount'],
+                    'payment_method' => $validated['payment_method'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                 ]);
             }

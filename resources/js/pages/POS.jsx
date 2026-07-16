@@ -471,6 +471,7 @@ export default function POS() {
             branch_id: resolvedBranchId,
             customer_id: selectedCustomerId || null,
             resumed_sale_id: resumedSaleId || null,
+            payment_method: paymentMethod,
             subtotal,
             discount_amount: discount,
             tax_amount: tax,

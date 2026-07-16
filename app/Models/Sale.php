@@ -21,6 +21,7 @@ class Sale extends Model
         'discount_percentage',
         'tax_amount',
         'total_amount',
+        'payment_method',
         'notes',
     ];
 
