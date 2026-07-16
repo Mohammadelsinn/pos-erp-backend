@@ -52,6 +52,7 @@ export default function POS() {
 
     // Checkout modal state
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+    const [showReceiptPreview, setShowReceiptPreview] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [amountTendered, setAmountTendered] = useState('');
     const [processingCheckout, setProcessingCheckout] = useState(false);
@@ -750,6 +751,16 @@ export default function POS() {
                             
                             {/* Running Grand Total Indicator */}
                             <div className="text-right flex items-center gap-2">
+                                {cart.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowReceiptPreview(true)}
+                                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-750 text-indigo-400 hover:text-indigo-350 transition-colors cursor-pointer"
+                                        title="Receipt Preview"
+                                    >
+                                        <Eye className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                                 <span className="px-2 py-0.5 text-[10px] font-bold text-slate-400 bg-slate-800 rounded-md">
                                     {cart.reduce((sum, item) => sum + item.quantity, 0)} items
                                 </span>
@@ -1384,6 +1395,115 @@ export default function POS() {
                                 className="flex-1"
                             >
                                 Print Receipt
+                            </Button>
+                        </div>
+                    </div>
+            {/* Active Cart Receipt Preview Modal */}
+            {showReceiptPreview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
+                        
+                        <div className="flex items-center justify-between p-4.5 border-b border-slate-800 bg-slate-950/20">
+                            <span className="text-xs font-bold text-slate-200">Receipt Preview (Draft)</span>
+                            <button 
+                                onClick={() => setShowReceiptPreview(false)}
+                                className="text-slate-400 hover:text-slate-200 font-bold"
+                            >
+                                Close
+                            </button>
+                        </div>
+
+                        <div className="p-5 max-h-[70vh] overflow-y-auto">
+                            {/* Receipt Body print layout wrapper */}
+                            <div className="bg-white text-slate-950 p-4 rounded-lg font-mono text-[11px] leading-snug">
+                                <h3 className="text-center font-bold text-sm tracking-wide uppercase">{activeBranch}</h3>
+                                <p className="text-center font-bold">POS TRANSACTION RECEIPT (PREVIEW)</p>
+                                <div className="divider" style={{ borderTop: '1px dashed #475569', margin: '8px 0' }} />
+                                
+                                <div className="row flex justify-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Sale ID: #DRAFT</span>
+                                    <span>Date: {new Date().toLocaleDateString()}</span>
+                                </div>
+                                <div className="row flex justify-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Time: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span>Customer: {selectedCustomerId ? MOCK_CUSTOMERS.find(c => c.id === selectedCustomerId)?.name : 'Walk-in'}</span>
+                                </div>
+                                
+                                <div className="divider" style={{ borderTop: '1px dashed #475569', margin: '8px 0' }} />
+
+                                <table className="w-full text-left" style={{ width: '100%' }}>
+                                    <thead>
+                                        <tr className="border-b" style={{ borderBottom: '1.5px solid #000', fontWeight: 'bold' }}>
+                                            <th className="pb-1">Item</th>
+                                            <th className="pb-1 text-center" style={{ textAlign: 'center' }}>Qty</th>
+                                            <th className="pb-1 text-right" style={{ textAlign: 'right' }}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {cart.map(item => (
+                                            <tr key={item.cartId}>
+                                                <td className="py-1">
+                                                    <div>{item.name}</div>
+                                                    {item.variation && (
+                                                        <div style={{ fontSize: '9px', color: '#475569' }}>
+                                                            ({[item.variation.size && `Size: ${item.variation.size}`, item.variation.color && `Color: ${item.variation.color}`].filter(Boolean).join(', ')})
+                                                        </div>
+                                                    )}
+                                                    {Number(item.discount_amount) > 0 && (
+                                                        <div style={{ fontSize: '9px', color: '#dc2626', fontWeight: 'bold' }}>
+                                                            (Disc: -${Number(item.discount_amount).toFixed(2)} ea)
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="py-1 text-center" style={{ textAlign: 'center' }}>{item.quantity}</td>
+                                                <td className="py-1 text-right" style={{ textAlign: 'right' }}>
+                                                    ${((item.unit_price - (item.discount_amount || 0)) * item.quantity).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div className="divider" style={{ borderTop: '1px dashed #475569', margin: '8px 0' }} />
+
+                                <div className="row flex justify-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Subtotal</span>
+                                    <span>${getCartSubtotal().toFixed(2)}</span>
+                                </div>
+                                <div className="row flex justify-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Tax</span>
+                                    <span>+${getCartTax().toFixed(2)}</span>
+                                </div>
+                                {getCartOrderDiscountAmount() > 0 && (
+                                    <div className="row flex justify-between" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Discount</span>
+                                        <span>-${getCartOrderDiscountAmount().toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="row flex justify-between font-bold" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px', marginTop: '4px' }}>
+                                    <span>TOTAL</span>
+                                    <span>${getCartTotal().toFixed(2)}</span>
+                                </div>
+
+                                {cartNotes && (
+                                    <div style={{ marginTop: '10px', fontStyle: 'italic', fontSize: '10px' }}>
+                                        Notes: {cartNotes}
+                                    </div>
+                                )}
+
+                                <div className="divider" style={{ borderTop: '1px dashed #475569', margin: '8px 0' }} />
+                                <p className="text-center" style={{ textAlign: 'center', fontSize: '10px' }}>Thank you for shopping with us!</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/30 border-t border-slate-800 flex gap-3">
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                onClick={() => setShowReceiptPreview(false)}
+                                className="w-full text-xs font-bold py-2.5"
+                            >
+                                Close Preview
                             </Button>
                         </div>
                     </div>
