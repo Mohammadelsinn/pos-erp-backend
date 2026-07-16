@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
+import {
     Search, 
     SlidersHorizontal, 
     AlertTriangle, 
@@ -13,7 +13,9 @@ import {
     History, 
     CheckCircle2, 
     XCircle,
-    User
+    User,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
 import Table from '../components/Table';
@@ -28,7 +30,13 @@ export default function Inventory() {
     const [loading, setLoading] = useState(true);
     const [branches, setBranches] = useState([]);
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedBrand, setSelectedBrand] = useState('');
+    const [selectedProductStatus, setSelectedProductStatus] = useState('');
+    const [expandedProducts, setExpandedProducts] = useState({});
     
     // Pagination & Filter States
     const [search, setSearch] = useState('');
@@ -74,6 +82,9 @@ export default function Inventory() {
                 search,
                 branch_id: selectedBranch,
                 product_id: selectedProduct,
+                category_id: selectedCategory,
+                brand_id: selectedBrand,
+                product_status: selectedProductStatus,
                 status: selectedStatus
             };
             const response = await axios.get('/api/inventory', { params });
@@ -84,7 +95,7 @@ export default function Inventory() {
             // Compute summary metrics (simplified counts based on current response or separate fetches)
             // For a highly robust metric display, we fetch summary counts
             const summaryRes = await axios.get('/api/inventory', { 
-                params: { branch_id: selectedBranch, product_id: selectedProduct, per_page: 1000 } 
+                params: { branch_id: selectedBranch, product_id: selectedProduct, category_id: selectedCategory, brand_id: selectedBrand, product_status: selectedProductStatus, per_page: 1000 } 
             });
             const allItems = summaryRes.data.data || [];
             const low = allItems.filter(item => item.quantity > 0 && item.quantity <= item.min_stock_level).length;
@@ -122,15 +133,37 @@ export default function Inventory() {
         }
     };
 
+    // Fetch Categories List
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get('/api/categories');
+            setCategories(response.data.data || response.data || []);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
+
+    // Fetch Brands List
+    const fetchBrands = async () => {
+        try {
+            const response = await axios.get('/api/brands');
+            setBrands(response.data.data || response.data || []);
+        } catch (error) {
+            console.error('Error fetching brands:', error);
+        }
+    };
+
     // Trigger Initial Load & Refetches on Filters Change
     useEffect(() => {
         fetchBranches();
         fetchProducts();
+        fetchCategories();
+        fetchBrands();
     }, []);
 
     useEffect(() => {
         fetchInventory();
-    }, [page, perPage, selectedBranch, selectedProduct, selectedStatus]);
+    }, [page, perPage, selectedBranch, selectedProduct, selectedCategory, selectedBrand, selectedProductStatus, selectedStatus]);
 
     // Handle Quick Filter Change
     const handleSearchSubmit = (e) => {
@@ -143,6 +176,9 @@ export default function Inventory() {
         setSearch('');
         setSelectedBranch('');
         setSelectedProduct('');
+        setSelectedCategory('');
+        setSelectedBrand('');
+        setSelectedProductStatus('');
         setSelectedStatus('');
         setPage(1);
     };
@@ -375,6 +411,23 @@ export default function Inventory() {
         ...products.map(p => ({ value: p.id, label: p.name }))
     ];
 
+    const groupedProducts = React.useMemo(() => {
+        const groups = {};
+        inventoryItems.forEach(item => {
+            if (!item.product) return;
+            const prodId = item.product_id;
+            if (!groups[prodId]) {
+                groups[prodId] = {
+                    product: item.product,
+                    hasVariations: item.product.has_variations,
+                    inventories: []
+                };
+            }
+            groups[prodId].inventories.push(item);
+        });
+        return Object.values(groups);
+    }, [inventoryItems]);
+
     return (
         <PageWrapper title="Inventory Stock Control">
             
@@ -435,50 +488,79 @@ export default function Inventory() {
 
             {/* Filter controls panel */}
             <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800/85 backdrop-blur-md mb-6 space-y-4">
-                <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 items-end">
+                <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 items-end">
                     
-                    <div className="flex-1 w-full">
+                    <div className="md:col-span-2 w-full">
                         <Input
                             label="Search Product Stock"
                             id="stock-search"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Type product name, SKU, or barcode and press Enter..."
+                            placeholder="Search by name or SKU..."
                             icon={Search}
                         />
                     </div>
 
-                    <div className="w-full md:w-56">
-                        <Select
-                            label="Filter By Branch"
-                            id="branch-select"
+                    <div className="w-full">
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Branch</label>
+                        <select
                             value={selectedBranch}
-                            onChange={(e) => {
-                                setSelectedBranch(e.target.value);
-                                setPage(1);
-                            }}
-                            options={branchOptions}
-                        />
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                        >
+                            <option value="">All Branches</option>
+                            {branches.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
                     </div>
 
-                    <div className="w-full md:w-56">
-                        <Select
-                            label="Filter By Product"
-                            id="product-select"
-                            value={selectedProduct}
-                            onChange={(e) => {
-                                setSelectedProduct(e.target.value);
-                                setPage(1);
-                            }}
-                            options={productOptions}
-                        />
+                    <div className="w-full">
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto self-stretch md:self-auto shrink-0">
-                        <Button variant="secondary" type="button" onClick={handleResetFilters} className="w-full md:w-auto">
+                    <div className="w-full">
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Brand</label>
+                        <select
+                            value={selectedBrand}
+                            onChange={(e) => setSelectedBrand(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                        >
+                            <option value="">All Brands</option>
+                            {brands.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="w-full">
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
+                        <select
+                            value={selectedProductStatus}
+                            onChange={(e) => setSelectedProductStatus(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-955 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-2 md:col-span-6 justify-end pt-2">
+                        <Button variant="secondary" type="button" onClick={handleResetFilters}>
                             Reset
                         </Button>
-                        <Button variant="primary" type="submit" className="w-full md:w-auto">
+                        <Button variant="primary" type="submit" className="bg-purple-650 border-purple-500 hover:bg-purple-700">
                             Apply
                         </Button>
                     </div>
@@ -539,24 +621,242 @@ export default function Inventory() {
 
             {/* Inventory Listing Table */}
             <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl">
-                <Table
-                    columns={columns}
-                    data={inventoryItems}
-                    loading={loading}
-                    pagination={{
-                        page,
-                        lastPage,
-                        total,
-                        onPageChange: (newPage) => setPage(newPage)
-                    }}
-                    emptyState={
-                        <div className="py-12 flex flex-col items-center justify-center text-center">
-                            <Package className="w-12 h-12 text-slate-700 mb-3" />
-                            <span className="font-semibold text-slate-400 text-sm">No Inventory Matches Found</span>
-                            <p className="text-xs text-slate-600 max-w-sm mt-1">Try relaxing search parameters, selecting another branch location, or seeding default stocks.</p>
+                {loading ? (
+                    <div className="py-20 flex flex-col items-center justify-center text-center">
+                        <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin mb-3" />
+                        <span className="text-slate-400 text-xs font-semibold">Loading stock inventory...</span>
+                    </div>
+                ) : groupedProducts.length === 0 ? (
+                    <div className="py-16 flex flex-col items-center justify-center text-center">
+                        <Package className="w-12 h-12 text-slate-700 mb-3" />
+                        <span className="font-semibold text-slate-400 text-sm">No Inventory Matches Found</span>
+                        <p className="text-xs text-slate-600 max-w-sm mt-1">Try relaxing search parameters, selecting another branch location, or seeding default stocks.</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse table-auto min-w-[900px]">
+                            <thead>
+                                <tr className="bg-slate-900/80 border-b border-slate-800 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                    <th className="p-3 w-[25%]">Product</th>
+                                    <th className="p-3 w-[15%]">Category</th>
+                                    <th className="p-3 w-[15%]">Brand</th>
+                                    <th className="p-3 w-[12%]">Status</th>
+                                    <th className="p-3 w-[10%]">Stock</th>
+                                    <th className="p-3 w-[13%]">Variants</th>
+                                    <th className="p-3 w-[10%] text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/50 text-xs text-slate-300">
+                                {groupedProducts.map((group) => {
+                                    const p = group.product;
+                                    const isExpanded = !!expandedProducts[p.id];
+                                    const totalStock = group.inventories.reduce((acc, inv) => acc + (inv.quantity || 0), 0);
+                                    
+                                    // Main Row (Product)
+                                    return (
+                                        <React.Fragment key={p.id}>
+                                            <tr className="hover:bg-slate-800/5 transition-colors">
+                                                <td className="p-3.5">
+                                                    <div className="flex flex-col">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setQuickViewProduct(p)}
+                                                            className="font-bold text-slate-100 text-xs sm:text-sm tracking-tight hover:text-indigo-400 text-left transition-colors truncate max-w-[280px]"
+                                                        >
+                                                            {p.name}
+                                                        </button>
+                                                        <span className="text-[10px] font-mono text-slate-500 tracking-wider mt-0.5 uppercase">
+                                                            SKU: {p.sku || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3.5">
+                                                    {p.category ? (
+                                                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-semibold uppercase text-[9px]">
+                                                            {p.category.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-600">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3.5">
+                                                    {p.brand ? (
+                                                        <span className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-semibold uppercase text-[9px]">
+                                                            {p.brand.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-600">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3.5">
+                                                    {p.status === 'active' ? (
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-450">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                            Published
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                                                            Draft
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3.5">
+                                                    {group.hasVariations ? (
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono tracking-wider ${totalStock <= 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                            {totalStock} Total
+                                                        </span>
+                                                    ) : (
+                                                        (() => {
+                                                            const singleInv = group.inventories[0];
+                                                            const qty = singleInv?.quantity || 0;
+                                                            let badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                                                            if (singleInv?.stock_status === 'out_of_stock' || qty <= 0) {
+                                                                badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                                                            } else if (singleInv?.stock_status === 'low_stock' || qty <= singleInv?.min_stock_level) {
+                                                                badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                                                            }
+                                                            return (
+                                                                <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono tracking-wider ${badgeClass}`}>
+                                                                    {qty}
+                                                                </span>
+                                                            );
+                                                        })()
+                                                    )}
+                                                </td>
+                                                <td className="p-3.5">
+                                                    {group.hasVariations ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setExpandedProducts(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                                                            className="px-2 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-[10px] font-bold rounded-lg border border-purple-500/20 transition-all flex items-center gap-1 select-none"
+                                                        >
+                                                            <span>{group.inventories.length} variants</span>
+                                                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-500 italic text-[10px]">Standard</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3.5 text-center">
+                                                    {!group.hasVariations && group.inventories[0] && (
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <button
+                                                                onClick={() => handleOpenAdjust(group.inventories[0])}
+                                                                className="p-1 px-2 text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-750 hover:border-slate-600 text-slate-300 hover:text-slate-100 rounded transition-colors flex items-center gap-1"
+                                                                title="Adjust Stock"
+                                                            >
+                                                                <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+                                                                <span>Adjust</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleOpenHistory(group.inventories[0])}
+                                                                className="p-1 px-2 text-[10px] font-bold bg-slate-800 hover:bg-slate-700 border border-slate-750 hover:border-slate-600 text-slate-300 hover:text-slate-100 rounded transition-colors flex items-center gap-1"
+                                                                title="Audit Log"
+                                                            >
+                                                                <History className="w-3 h-3 text-slate-400" />
+                                                                <span>Logs</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+
+                                            {/* Collapsible sub-rows */}
+                                            {group.hasVariations && isExpanded && group.inventories.map((inv) => {
+                                                const v = inv.variation;
+                                                if (!v) return null;
+                                                const traits = [];
+                                                if (v.size) traits.push(v.size);
+                                                if (v.color) traits.push(v.color);
+                                                if (v.material) traits.push(v.material);
+                                                if (v.capacity) traits.push(v.capacity);
+                                                const traitLabel = traits.length > 0 ? traits.join(' / ') : `Variant #${v.id}`;
+                                                
+                                                let badgeClass = 'bg-slate-800/80 text-slate-300 border border-slate-750';
+                                                if (inv.stock_status === 'out_of_stock' || inv.quantity <= 0) {
+                                                    badgeClass = 'bg-rose-500/10 text-rose-455 border border-rose-500/20';
+                                                } else if (inv.stock_status === 'low_stock' || inv.quantity <= inv.min_stock_level) {
+                                                    badgeClass = 'bg-amber-500/10 text-amber-455 border border-amber-500/20';
+                                                }
+
+                                                return (
+                                                    <tr key={inv.id} className="bg-slate-950/20 border-b border-slate-850/50 hover:bg-slate-905/30 transition-colors">
+                                                        <td className="p-2.5 pl-6">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-slate-600 font-mono select-none">---</span>
+                                                                <span className="font-semibold text-slate-350">{traitLabel}</span>
+                                                                {inv.branch && (
+                                                                    <span className="text-[9px] text-slate-500 font-medium font-sans bg-slate-900 border border-slate-850 px-1 py-0.5 rounded">
+                                                                        {inv.branch.name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2.5"></td>
+                                                        <td className="p-2.5"></td>
+                                                        <td className="p-2.5"></td>
+                                                        <td className="p-2.5">
+                                                            <span className={`px-2 py-0.5 rounded font-bold font-mono tracking-wider text-[11px] ${badgeClass}`}>
+                                                                {inv.quantity}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2.5"></td>
+                                                        <td className="p-2.5 text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                <button
+                                                                    onClick={() => handleOpenAdjust(inv)}
+                                                                    className="p-1 px-2 text-[10px] font-bold bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors flex items-center gap-1"
+                                                                    title="Adjust Stock"
+                                                                >
+                                                                    <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+                                                                    <span>Adjust</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOpenHistory(inv)}
+                                                                    className="p-1 px-2 text-[10px] font-bold bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-slate-100 rounded transition-colors flex items-center gap-1"
+                                                                    title="Audit Log"
+                                                                >
+                                                                    <History className="w-3 h-3 text-slate-400" />
+                                                                    <span>Logs</span>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        {/* Pagination Row */}
+                        <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-900/10 text-xs">
+                            <span className="text-slate-500 font-medium">
+                                Showing Page <span className="text-slate-355 font-bold">{page}</span> of <span className="text-slate-355 font-bold">{lastPage}</span> ({total} items)
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    disabled={page === 1}
+                                    onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-955 border border-slate-800 hover:border-slate-700 text-slate-300 disabled:opacity-40 transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={page === lastPage}
+                                    onClick={() => setPage(prev => Math.min(lastPage, prev + 1))}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-955 border border-slate-800 hover:border-slate-700 text-slate-300 disabled:opacity-40 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
                         </div>
-                    }
-                />
+                    </div>
+                )}
             </div>
 
             {/* Adjust Stock Quantity Modal */}

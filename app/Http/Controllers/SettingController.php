@@ -18,6 +18,7 @@ class SettingController extends Controller
         'currency',
         'timezone',
         'date_format',
+        'product_attributes',
     ];
 
     public function index(): JsonResponse
@@ -43,6 +44,7 @@ class SettingController extends Controller
             'currency'        => ['sometimes', 'string', 'size:3'],
             'timezone'        => ['sometimes', 'string', 'max:100', 'timezone:all'],
             'date_format'     => ['sometimes', 'string', 'max:30'],
+            'product_attributes' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $old = Setting::whereIn('key', array_keys($data))->pluck('value', 'key')->toArray();

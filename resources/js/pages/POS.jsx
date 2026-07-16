@@ -444,6 +444,13 @@ export default function POS() {
         printWindow.document.close();
     };
 
+    const visibleProducts = products.filter(prod => {
+        if (prod.has_variations) {
+            return prod.variations && prod.variations.some(v => v.stock_quantity > 0);
+        }
+        return prod.stock_quantity > 0;
+    });
+
     return (
         <PageWrapper 
             title="POS Station" 
@@ -555,7 +562,7 @@ export default function POS() {
                                 </div>
                             ))}
                         </div>
-                    ) : products.length === 0 ? (
+                    ) : visibleProducts.length === 0 ? (
                         <div className="text-center py-16 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-8 space-y-4 max-w-lg mx-auto">
                             <div className="inline-flex items-center justify-center p-3.5 rounded-full bg-slate-950 border border-slate-800 text-slate-500">
                                 <Archive className="w-7 h-7" />
@@ -567,7 +574,7 @@ export default function POS() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {products.map(prod => {
+                            {visibleProducts.map(prod => {
                                 const isOutOfStock = prod.stock_quantity <= 0;
                                 const isLowStock = prod.stock_quantity > 0 && prod.stock_quantity <= 5;
                                 

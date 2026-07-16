@@ -14,6 +14,8 @@ import Settings from './pages/Settings';
 import BranchesManagement from './pages/BranchesManagement';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
+import Attributes from './pages/Attributes';
+import Terms from './pages/Terms';
 import Inventory from './pages/Inventory';
 import StockAdjustment from './pages/StockAdjustment';
 import DamagedLostStock from './pages/DamagedLostStock';
@@ -43,6 +45,8 @@ function App() {
                         <Route path="products" element={<Products />} />
                         <Route path="products/create" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
+                        <Route path="attributes" element={<Attributes />} />
+                        <Route path="terms" element={<Terms />} />
                         <Route path="inventory" element={<Inventory />} />
                         <Route path="inventory/adjust" element={<StockAdjustment />} />
                         <Route path="inventory/damaged-lost" element={<DamagedLostStock />} />

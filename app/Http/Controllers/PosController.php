@@ -97,6 +97,7 @@ class PosController extends Controller
                         'size' => $variation->size,
                         'color' => $variation->color,
                         'material' => $variation->material,
+                        'capacity' => $variation->capacity,
                         'sku' => $variation->sku,
                         'barcode' => $variation->barcode,
                         'selling_price' => $variation->selling_price,

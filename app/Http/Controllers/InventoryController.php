@@ -24,6 +24,27 @@ class InventoryController extends Controller
             $query->where('product_id', $request->product_id);
         }
 
+        // Category Filter
+        if ($request->filled('category_id')) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+        }
+
+        // Brand Filter
+        if ($request->filled('brand_id')) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('brand_id', $request->brand_id);
+            });
+        }
+
+        // Product Status Filter
+        if ($request->filled('product_status')) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('status', $request->product_status);
+            });
+        }
+
         // Product Variation Filter
         if ($request->filled('product_variation_id')) {
             $query->where('product_variation_id', $request->product_variation_id);

@@ -5,7 +5,7 @@ import {
     LayoutGrid, Calculator, ShoppingBag, Package, Archive, 
     ArrowUpRight, Truck, Warehouse, DollarSign, TrendingDown, 
     CreditCard, Percent, Key, Users, UserCheck, GitBranch, 
-    CheckSquare, Store, FileText, Settings, Shield, ChevronLeft, ChevronRight, Menu, Lock, Building,
+    CheckSquare, Store, FileText, Settings, Shield, ChevronLeft, ChevronRight, ChevronDown, Menu, Lock, Building,
     AlertTriangle
 } from 'lucide-react';
 
@@ -21,8 +21,18 @@ const navigationGroups = [
     {
         title: "Catalog & Supply",
         items: [
-            { name: "Products", path: "/products", icon: Package },
-            { name: "Inventory Stock", path: "/inventory", icon: Archive },
+            {
+                name: "Products",
+                icon: Package,
+                subItems: [
+                    { name: "All Products", path: "/products" },
+                    { name: "Categories", path: "/categories" },
+                    { name: "Brands", path: "/brands" },
+                    { name: "Attributes", path: "/attributes" },
+                    { name: "Terms", path: "/terms" },
+                    { name: "Inventory", path: "/inventory" },
+                ]
+            },
             { name: "Stock Adjustment", path: "/inventory/adjust", icon: CheckSquare },
             { name: "Damaged/Lost Stock", path: "/inventory/damaged-lost", icon: AlertTriangle },
             { name: "Movement History", path: "/inventory/movement-history", icon: FileText },
@@ -69,6 +79,15 @@ export default function Sidebar({ isOpen, toggleSidebar, isMobileOpen, closeMobi
         name: 'System ERP',
         logo: ''
     });
+
+    const [expandedMenus, setExpandedMenus] = useState({ Products: true });
+
+    const toggleMenu = (menuName) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuName]: !prev[menuName]
+        }));
+    };
 
     const fetchCompanyInfo = async () => {
         try {
@@ -153,6 +172,56 @@ export default function Sidebar({ isOpen, toggleSidebar, isMobileOpen, closeMobi
                             <ul className="space-y-0.5">
                                 {group.items.map((item, itemIdx) => {
                                     const Icon = item.icon;
+                                    const hasSubItems = !!item.subItems;
+                                    const isExpanded = expandedMenus[item.name];
+
+                                    if (hasSubItems) {
+                                        return (
+                                            <li key={itemIdx} className="space-y-0.5">
+                                                <button
+                                                    onClick={() => toggleMenu(item.name)}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative ${
+                                                        isExpanded 
+                                                            ? 'text-slate-200 bg-slate-955/40 border border-slate-800/40' 
+                                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent hover:border-slate-800/60'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3.5">
+                                                        <Icon className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                                                            isExpanded ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'
+                                                        }`} />
+                                                        {isOpen && <span className="truncate">{item.name}</span>}
+                                                    </div>
+                                                    {isOpen && (
+                                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-slate-350' : 'text-slate-500'}`} />
+                                                    )}
+                                                </button>
+                                                
+                                                {isExpanded && isOpen && (
+                                                    <ul className="pl-4 py-1 space-y-0.5 border-l border-slate-850 ml-5 animate-fade-in">
+                                                        {item.subItems.map((sub, subIdx) => (
+                                                            <li key={subIdx}>
+                                                                <NavLink
+                                                                    to={sub.path}
+                                                                    onClick={closeMobileSidebar}
+                                                                    className={({ isActive }) => 
+                                                                        `flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                                                                            isActive 
+                                                                                ? 'text-white bg-indigo-600/90 shadow-md shadow-indigo-600/15' 
+                                                                                : 'text-slate-450 hover:text-slate-200 hover:bg-slate-950/30'
+                                                                        }`
+                                                                    }
+                                                                >
+                                                                    <span>{sub.name}</span>
+                                                                </NavLink>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </li>
+                                        );
+                                    }
+
                                     return (
                                         <li key={itemIdx}>
                                             <NavLink
