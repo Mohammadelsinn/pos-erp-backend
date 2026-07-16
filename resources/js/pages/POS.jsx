@@ -508,6 +508,78 @@ export default function POS() {
             });
     };
 
+    const handleQuickCheckout = () => {
+        if (cart.length === 0) return;
+        if (!resolvedBranchId) {
+            alert('Active branch ID not resolved. Please re-authenticate.');
+            return;
+        }
+
+        const confirmQuick = window.confirm(`Proceed with Quick Checkout (Exact Cash of $${getCartTotal().toFixed(2)})?`);
+        if (!confirmQuick) return;
+
+        setProcessingCheckout(true);
+
+        const subtotal = getCartSubtotal();
+        const tax = getCartTax();
+        const discount = getCartOrderDiscountAmount();
+        const total = getCartTotal();
+
+        const checkoutItems = cart.map(item => {
+            const itemTotal = item.unit_price * item.quantity;
+            const itemDiscount = (item.discount_amount || 0) * item.quantity;
+            const netAmount = Math.max(0, itemTotal - itemDiscount);
+            const itemTax = netAmount * ((item.tax || 0) / 100);
+
+            return {
+                product_id: item.product_id,
+                product_variation_id: item.product_variation_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                discount_amount: itemDiscount,
+                tax_amount: itemTax,
+                total_price: netAmount + itemTax
+            };
+        });
+
+        const payload = {
+            branch_id: resolvedBranchId,
+            customer_id: selectedCustomerId || null,
+            resumed_sale_id: resumedSaleId || null,
+            payment_method: 'cash',
+            subtotal,
+            discount_amount: discount,
+            tax_amount: tax,
+            total_amount: total,
+            notes: cartNotes,
+            items: checkoutItems
+        };
+
+        axios.post('/api/pos/checkout', payload)
+            .then(res => {
+                if (res.data.success) {
+                    setLastCompletedSale(res.data.sale);
+                    setCart([]);
+                    setSelectedCustomerId('');
+                    setResumedSaleId(null);
+                    setCartDiscount(0);
+                    setCartNotes('');
+                    setAmountTendered('');
+                    setSearchQuery(prev => prev); // force reload
+                } else {
+                    alert(res.data.message || 'Quick checkout failed');
+                }
+            })
+            .catch(err => {
+                console.error("Quick Checkout Error:", err);
+                const msg = err.response?.data?.message || 'Error executing quick checkout transaction.';
+                alert(msg);
+            })
+            .finally(() => {
+                setProcessingCheckout(false);
+            });
+    };
+
     // Print receipt
     const handlePrintReceipt = () => {
         const printWindow = window.open('', '_blank');
@@ -967,6 +1039,18 @@ export default function POS() {
                                     </span>
                                 </div>
                             </div>
+
+                            {/* Quick Checkout Button */}
+                            {cart.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleQuickCheckout}
+                                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600/90 hover:bg-emerald-600 text-white transition-colors active:scale-95 shadow-md shadow-emerald-950/20 flex items-center justify-center gap-1.5 cursor-pointer mb-2.5"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>Quick Pay (Exact Cash)</span>
+                                </button>
+                            )}
 
                             {/* Actions Buttons */}
                             <div className="grid grid-cols-3 gap-2">
