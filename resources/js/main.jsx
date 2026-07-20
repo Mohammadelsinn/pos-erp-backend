@@ -46,6 +46,8 @@ function App() {
                         <Route path="products" element={<Products />} />
                         <Route path="products/create" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
+                        <Route path="categories" element={<Products />} />
+                        <Route path="brands" element={<Products />} />
                         <Route path="attributes" element={<Attributes />} />
                         <Route path="terms" element={<Terms />} />
                         <Route path="inventory" element={<Inventory />} />

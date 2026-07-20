@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { 
+import {
     Plus, Search, Edit2, Trash2, Eye, FolderPlus, Tag, Filter,
     CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Layers
 } from 'lucide-react';
 import ProductQuickView from '../components/ProductQuickView';
 import StockStatusBadge from '../components/StockStatusBadge';
 
+const TAB_BY_PATH = {
+    '/categories': 'categories',
+    '/brands': 'brands',
+    '/products': 'products',
+};
+
 export default function Products() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('products'); // products, categories, brands
-    
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(TAB_BY_PATH[location.pathname] || 'products'); // products, categories, brands
+
+    // Keep the active tab in sync with the URL so the sidebar's
+    // Categories/Brands links (and the browser back/forward buttons) work.
+    useEffect(() => {
+        setActiveTab(TAB_BY_PATH[location.pathname] || 'products');
+    }, [location.pathname]);
+
     // Products State
     const [products, setProducts] = useState([]);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
@@ -249,7 +262,7 @@ export default function Products() {
             {/* Custom Premium Tabs */}
             <div className="flex border-b border-slate-800 gap-2">
                 <button
-                    onClick={() => { setActiveTab('products'); setFormErrors({}); }}
+                    onClick={() => { navigate('/products'); setFormErrors({}); }}
                     className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'products'
                             ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
@@ -260,7 +273,7 @@ export default function Products() {
                     Products List
                 </button>
                 <button
-                    onClick={() => { setActiveTab('categories'); setFormErrors({}); }}
+                    onClick={() => { navigate('/categories'); setFormErrors({}); }}
                     className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'categories'
                             ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
@@ -271,7 +284,7 @@ export default function Products() {
                     Categories Management
                 </button>
                 <button
-                    onClick={() => { setActiveTab('brands'); setFormErrors({}); }}
+                    onClick={() => { navigate('/brands'); setFormErrors({}); }}
                     className={`flex items-center gap-2 px-5 py-3.5 text-xs font-semibold tracking-wide border-b-2 transition-all duration-300 rounded-t-lg ${
                         activeTab === 'brands'
                             ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5 shadow-[inset_0_-2px_0_0_#6366f1]'
