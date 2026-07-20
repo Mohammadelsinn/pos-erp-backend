@@ -23,6 +23,7 @@ import StockMovementHistory from './pages/StockMovementHistory';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
 import POS from './pages/POS';
+import Orders from './pages/Orders';
 
 function App() {
     return (
@@ -39,7 +40,7 @@ function App() {
                         
                         {/* Core Operations */}
                         <Route path="pos" element={<POS />} />
-                        <Route path="orders" element={<PlaceholderPage title="Order Ledger" />} />
+                        <Route path="orders" element={<Orders />} />
                         
                         {/* Catalog & Supply */}
                         <Route path="products" element={<Products />} />

@@ -133,7 +133,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('pos/sales/{id}/resume', [PosController::class, 'resume']);
         Route::patch('pos/sales/{id}/note', [PosController::class, 'updateNote']);
 
-        // Completion and receipt
+        // Completion, listing, cancellation and receipt
+        Route::get('pos/orders', [PosController::class, 'index']);
+        Route::post('pos/orders/{id}/cancel', [PosController::class, 'cancel']);
         Route::post('pos/sales/{id}/complete', [PosController::class, 'complete']);
         Route::get('pos/sales/{id}/receipt', [PosController::class, 'receipt']);
         Route::delete('pos/sales/{id}', [PosController::class, 'destroy']);

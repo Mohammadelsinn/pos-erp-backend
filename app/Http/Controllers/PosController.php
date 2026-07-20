@@ -924,4 +924,106 @@ class PosController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Suspended sale deleted successfully']);
     }
+
+    public function index(Request $request)
+    {
+        $query = Sale::query()
+            ->with(['branch', 'user', 'items.product', 'items.variation']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%")
+                  ->orWhere('customer_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('payment_method') && $request->payment_method !== 'all') {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('customer_id') && $request->customer_id !== 'all') {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $perPage = min((int) $request->get('per_page', 10), 100);
+        $sales = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        return response()->json($sales);
+    }
+
+    public function cancel($saleId)
+    {
+        $sale = Sale::findOrFail($saleId);
+
+        if ($sale->status !== 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only completed sales can be cancelled.'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $sale->status = 'cancelled';
+            $sale->save();
+
+            // Reverse inventory adjustments (restock)
+            foreach ($sale->items as $item) {
+                $inventory = Inventory::where('branch_id', $sale->branch_id)
+                    ->where('product_id', $item->product_id)
+                    ->where('product_variation_id', $item->product_variation_id)
+                    ->first();
+
+                if ($inventory) {
+                    $inventory->quantity += $item->quantity;
+                    $inventory->save();
+
+                    InventoryAdjustment::create([
+                        'inventory_id' => $inventory->id,
+                        'product_id' => $inventory->product_id,
+                        'product_variation_id' => $inventory->product_variation_id,
+                        'branch_id' => $inventory->branch_id,
+                        'user_id' => Auth::id(),
+                        'type' => 'increment',
+                        'quantity' => $item->quantity,
+                        'reason' => 'Sale cancelled: ' . ($sale->order_number ?? "ID: {$sale->id}"),
+                        'reference_type' => 'App\Models\Sale',
+                        'reference_id' => $sale->id,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sale cancelled and stock returned successfully.',
+                'sale' => $sale->load('items.product', 'items.variation')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel sale: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -1482,6 +1482,9 @@ export default function POS() {
                             </Button>
                         </div>
                     </div>
+                </div>
+            )}
+
             {/* Active Cart Receipt Preview Modal */}
             {showReceiptPreview && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
