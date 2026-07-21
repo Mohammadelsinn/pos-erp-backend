@@ -22,6 +22,8 @@ class Sale extends Model
         'tax_amount',
         'total_amount',
         'payment_method',
+        'source',
+        'payment_status',
         'notes',
     ];
 

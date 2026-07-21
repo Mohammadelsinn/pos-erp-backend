@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductImageController;
 use App\Http\Controllers\ProductVariationController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ConfigController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -139,5 +140,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('pos/sales/{id}/complete', [PosController::class, 'complete']);
         Route::get('pos/sales/{id}/receipt', [PosController::class, 'receipt']);
         Route::delete('pos/sales/{id}', [PosController::class, 'destroy']);
+    });
+
+    // Orders, invoices, receipts, and payment status — requires manage_orders permission
+    Route::middleware('permission:manage_orders')->group(function () {
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{id}/items', [OrderController::class, 'items']);
+        Route::get('orders/{id}/invoice', [OrderController::class, 'invoice']);
+        Route::post('orders/{id}/invoice/pdf', [OrderController::class, 'invoicePdf']);
+        Route::get('orders/{id}/receipt', [OrderController::class, 'receipt']);
+        Route::get('orders/{id}/payment', [OrderController::class, 'payment']);
+        Route::patch('orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+        Route::get('orders/{id}', [OrderController::class, 'show']);
     });
 });

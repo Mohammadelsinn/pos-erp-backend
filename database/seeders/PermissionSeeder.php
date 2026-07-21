@@ -21,6 +21,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_suppliers',    'display_name' => 'Manage Suppliers',    'description' => 'Create, update, and delete suppliers'],
             ['name' => 'manage_purchases',    'display_name' => 'Manage Purchases',    'description' => 'Create, update, and manage purchase orders'],
             ['name' => 'manage_pos',          'display_name' => 'Manage POS',          'description' => 'Access the cashier POS screen and process sales'],
+            ['name' => 'manage_orders',       'display_name' => 'Manage Orders',       'description' => 'View orders, invoices, receipts, and manage payment status'],
         ];
 
         foreach ($permissions as $perm) {
