@@ -24,6 +24,7 @@ import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
 import POS from './pages/POS';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 
 function App() {
     return (
@@ -41,6 +42,7 @@ function App() {
                         {/* Core Operations */}
                         <Route path="pos" element={<POS />} />
                         <Route path="orders" element={<Orders />} />
+                        <Route path="orders/:id" element={<OrderDetail />} />
                         
                         {/* Catalog & Supply */}
                         <Route path="products" element={<Products />} />

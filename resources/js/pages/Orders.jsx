@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import PageWrapper from '../components/PageWrapper';
 import Table from '../components/Table';
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function Orders() {
+    const navigate = useNavigate();
     // Dropdowns & lists
     const [orders, setOrders] = useState([]);
     const [branches, setBranches] = useState([]);
@@ -270,7 +272,7 @@ export default function Orders() {
                         variant="secondary"
                         size="xs"
                         icon={Eye}
-                        onClick={() => setViewingOrder(row)}
+                        onClick={() => navigate(`/orders/${row.id}`)}
                         title="View details"
                         className="p-1.5 text-slate-405 hover:text-slate-200 border-slate-800 bg-slate-950/20 hover:bg-slate-900/60"
                     />
