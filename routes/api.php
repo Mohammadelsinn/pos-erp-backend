@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\RefundController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupplierController;
@@ -151,6 +152,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('orders/{id}/receipt', [OrderController::class, 'receipt']);
         Route::get('orders/{id}/payment', [OrderController::class, 'payment']);
         Route::patch('orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+        Route::post('orders/{id}/refund', [RefundController::class, 'refund']);
+        Route::post('orders/{id}/partial-refund', [RefundController::class, 'partialRefund']);
+        Route::post('orders/{id}/exchange', [RefundController::class, 'exchange']);
         Route::get('orders/{id}', [OrderController::class, 'show']);
     });
 });

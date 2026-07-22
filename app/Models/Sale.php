@@ -49,4 +49,9 @@ class Sale extends Model
     {
         return $this->hasMany(SaleItem::class);
     }
+
+    public function refunds()
+    {
+        return $this->hasMany(Refund::class, 'order_id');
+    }
 }

@@ -14,7 +14,7 @@ class OrderController extends Controller
      * Draft/held sales are POS cart states, not finalized orders — the orders
      * module only deals with sales that have gone through checkout/complete.
      */
-    private const FINALIZED_STATUSES = ['completed', 'cancelled'];
+    private const FINALIZED_STATUSES = ['completed', 'cancelled', 'refunded'];
 
     public function index(Request $request): JsonResponse
     {
