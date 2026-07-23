@@ -22,6 +22,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage_purchases',    'display_name' => 'Manage Purchases',    'description' => 'Create, update, and manage purchase orders'],
             ['name' => 'manage_pos',          'display_name' => 'Manage POS',          'description' => 'Access the cashier POS screen and process sales'],
             ['name' => 'manage_orders',       'display_name' => 'Manage Orders',       'description' => 'View orders, invoices, receipts, and manage payment status'],
+            ['name' => 'manage_cash_drawer',  'display_name' => 'Manage Cash Drawer',  'description' => 'Open/close cash drawer sessions and record cash in/out'],
         ];
 
         foreach ($permissions as $perm) {

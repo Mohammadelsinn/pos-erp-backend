@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\CashDrawerController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ProductController;
@@ -146,6 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Orders, invoices, receipts, and payment status — requires manage_orders permission
     Route::middleware('permission:manage_orders')->group(function () {
         Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/payment-summary', [OrderController::class, 'paymentSummary']);
         Route::get('orders/{id}/items', [OrderController::class, 'items']);
         Route::get('orders/{id}/invoice', [OrderController::class, 'invoice']);
         Route::post('orders/{id}/invoice/pdf', [OrderController::class, 'invoicePdf']);
@@ -156,5 +158,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('orders/{id}/partial-refund', [RefundController::class, 'partialRefund']);
         Route::post('orders/{id}/exchange', [RefundController::class, 'exchange']);
         Route::get('orders/{id}', [OrderController::class, 'show']);
+    });
+
+    // Cash drawer — requires manage_cash_drawer permission
+    Route::middleware('permission:manage_cash_drawer')->group(function () {
+        Route::post('cash-drawer/open', [CashDrawerController::class, 'open']);
+        Route::get('cash-drawer/current', [CashDrawerController::class, 'current']);
+        Route::post('cash-drawer/cash-in', [CashDrawerController::class, 'cashIn']);
+        Route::post('cash-drawer/cash-out', [CashDrawerController::class, 'cashOut']);
+        Route::post('cash-drawer/close', [CashDrawerController::class, 'close']);
+        Route::get('cash-drawer/sessions', [CashDrawerController::class, 'sessions']);
+        Route::get('cash-drawer/sessions/{id}/report', [CashDrawerController::class, 'report']);
+        Route::get('cash-drawer/sessions/{id}/cashier-report', [CashDrawerController::class, 'cashierReport']);
     });
 });

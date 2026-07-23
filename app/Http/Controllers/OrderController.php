@@ -16,6 +16,42 @@ class OrderController extends Controller
      */
     private const FINALIZED_STATUSES = ['completed', 'cancelled', 'refunded'];
 
+    /**
+     * Totals by payment method for completed orders in a date range, plus a grand total.
+     */
+    public function paymentSummary(Request $request): JsonResponse
+    {
+        $query = Sale::query()->where('status', 'completed');
+
+        if ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $rows = $query->selectRaw('payment_method, COUNT(*) as order_count, SUM(total_amount) as total_amount')
+            ->groupBy('payment_method')
+            ->get();
+
+        $byMethod = $rows->map(fn ($row) => [
+            'payment_method' => $row->payment_method,
+            'order_count' => (int) $row->order_count,
+            'total_amount' => round((float) $row->total_amount, 2),
+        ])->values();
+
+        return response()->json([
+            'by_method' => $byMethod,
+            'order_count' => $byMethod->sum('order_count'),
+            'grand_total' => round($byMethod->sum('total_amount'), 2),
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = Sale::query()

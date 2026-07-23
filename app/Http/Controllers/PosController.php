@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashDrawerSession;
 use App\Models\Inventory;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
@@ -561,6 +562,16 @@ class PosController extends Controller
             $sale->status = 'completed';
             $sale->save();
 
+            if ($sale->payment_method === 'cash') {
+                CashDrawerSession::logCashMovement(
+                    $sale->branch_id,
+                    'sale',
+                    (float) $sale->total_amount,
+                    'POS Sale #' . $sale->order_number,
+                    Auth::id()
+                );
+            }
+
             DB::commit();
 
             return response()->json($sale->load('items.product', 'items.variation'));
@@ -890,6 +901,16 @@ class PosController extends Controller
                     'reference_type' => 'App\Models\Sale',
                     'reference_id' => $sale->id,
                 ]);
+            }
+
+            if (($validated['payment_method'] ?? null) === 'cash') {
+                CashDrawerSession::logCashMovement(
+                    $validated['branch_id'],
+                    'sale',
+                    (float) $sale->total_amount,
+                    'POS Sale #' . ($sale->order_number ?? $sale->id),
+                    Auth::id()
+                );
             }
 
             \DB::commit();

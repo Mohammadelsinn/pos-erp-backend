@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashDrawerSession;
 use App\Models\Inventory;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
@@ -56,6 +57,16 @@ class RefundController extends Controller
             $order->payment_status = 'refunded';
             $order->save();
 
+            if ($order->payment_method === 'cash') {
+                CashDrawerSession::logCashMovement(
+                    $order->branch_id,
+                    'refund',
+                    $totalRefunded,
+                    'Refund: ' . ($order->order_number ?? "Order #{$order->id}"),
+                    Auth::id()
+                );
+            }
+
             DB::commit();
 
             return response()->json($refund->load('items'), 201);
@@ -104,6 +115,16 @@ class RefundController extends Controller
 
             $refund->total_amount = round($totalRefunded, 2);
             $refund->save();
+
+            if ($order->payment_method === 'cash') {
+                CashDrawerSession::logCashMovement(
+                    $order->branch_id,
+                    'refund',
+                    $totalRefunded,
+                    'Partial refund: ' . ($order->order_number ?? "Order #{$order->id}"),
+                    Auth::id()
+                );
+            }
 
             DB::commit();
 
@@ -178,6 +199,18 @@ class RefundController extends Controller
             $refund->total_amount = round($returnedValue, 2);
             $refund->save();
 
+            $balanceDue = round($newValue - $returnedValue, 2);
+
+            if ($order->payment_method === 'cash' && $balanceDue !== 0.0) {
+                CashDrawerSession::logCashMovement(
+                    $order->branch_id,
+                    $balanceDue > 0 ? 'sale' : 'refund',
+                    abs($balanceDue),
+                    'Exchange: ' . ($order->order_number ?? "Order #{$order->id}"),
+                    Auth::id()
+                );
+            }
+
             DB::commit();
 
             return response()->json([
@@ -185,7 +218,7 @@ class RefundController extends Controller
                 'order' => $order->fresh()->load(['items.product', 'items.variation']),
                 'returned_value' => round($returnedValue, 2),
                 'new_items_value' => round($newValue, 2),
-                'balance_due' => round($newValue - $returnedValue, 2),
+                'balance_due' => $balanceDue,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
