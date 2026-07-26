@@ -89,6 +89,83 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
+    public function paymentsSummary(Request $request): JsonResponse
+    {
+        $query = Sale::query()
+            ->whereIn('status', self::FINALIZED_STATUSES);
+
+        if ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $sales = $query->get();
+
+        $totalCollected = 0.00;
+        $totalRefunded = 0.00;
+        $totalPending = 0.00;
+        $totalFailed = 0.00;
+
+        $methodsMap = [];
+        $statusCounts = [
+            'paid' => 0,
+            'pending' => 0,
+            'refunded' => 0,
+            'failed' => 0
+        ];
+
+        foreach ($sales as $sale) {
+            $amount = (double) $sale->total_amount;
+            $method = strtolower($sale->payment_method ?: 'cash');
+            $payStatus = strtolower($sale->payment_status ?: 'paid');
+
+            if ($payStatus === 'paid') {
+                $totalCollected += $amount;
+                $statusCounts['paid']++;
+            } elseif ($payStatus === 'refunded') {
+                $totalRefunded += $amount;
+                $statusCounts['refunded']++;
+            } elseif ($payStatus === 'pending') {
+                $totalPending += $amount;
+                $statusCounts['pending']++;
+            } elseif ($payStatus === 'failed') {
+                $totalFailed += $amount;
+                $statusCounts['failed']++;
+            }
+
+            if (!isset($methodsMap[$method])) {
+                $methodsMap[$method] = [
+                    'method' => ucfirst($method),
+                    'count' => 0,
+                    'total' => 0.00
+                ];
+            }
+            if ($payStatus === 'paid') {
+                $methodsMap[$method]['total'] += $amount;
+            }
+            $methodsMap[$method]['count'] += 1;
+        }
+
+        return response()->json([
+            'overview' => [
+                'total_collected' => round($totalCollected, 2),
+                'total_refunded' => round($totalRefunded, 2),
+                'total_pending' => round($totalPending, 2),
+                'total_failed' => round($totalFailed, 2),
+                'transaction_count' => $sales->count()
+            ],
+            'status_counts' => $statusCounts,
+            'methods_breakdown' => array_values($methodsMap)
+        ]);
+    }
+
     public function show($id): JsonResponse
     {
         $order = $this->findOrder($id);

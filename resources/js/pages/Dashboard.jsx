@@ -164,7 +164,7 @@ export default function Dashboard() {
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stat.title}</p>
-                                        <h3 className="text-xl font-bold tracking-tight text-white group-hover:text-indigo-400 transition-colors">{stat.value}</h3>
+                                        <h3 className="text-xl font-bold tracking-tight text-slate-100 group-hover:text-indigo-400 transition-colors">{stat.value}</h3>
                                     </div>
                                     <div className={`p-3 rounded-xl bg-gradient-to-br border transition-all ${colorMap[stat.color]}`}>
                                         <Icon className="w-4.5 h-4.5 group-hover:scale-105 transition-transform" />
@@ -187,7 +187,7 @@ export default function Dashboard() {
                             <ShieldCheck className="w-3.5 h-3.5" />
                             Security Shield Activated
                         </div>
-                        <h2 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
+                        <h2 className="text-xl lg:text-2xl font-bold text-slate-100 tracking-tight">
                             {data.settings.company_name || 'Enterprise'} ERP Hub
                         </h2>
                         <p className="text-xs text-slate-450 max-w-xl leading-relaxed">

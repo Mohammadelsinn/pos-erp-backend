@@ -29,7 +29,7 @@ export default function PageWrapper({ title, subtitle, breadcrumbs = [], actions
                         </nav>
                     )}
 
-                    <h2 className="text-2xl font-extrabold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight">
+                    <h2 className="text-2xl font-extrabold bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent tracking-tight">
                         {title}
                     </h2>
                     {subtitle && (

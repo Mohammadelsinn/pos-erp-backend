@@ -44,6 +44,13 @@
     --color-slate-350: var(--text-muted);
     --color-slate-400: var(--text-muted);
     --color-slate-450: var(--text-primary);
+    --color-slate-455: var(--text-primary);
+    --color-slate-500: var(--text-muted);
+    --color-slate-550: var(--text-muted);
+    --color-slate-600: var(--text-muted);
+    --color-slate-650: var(--text-muted);
+    --color-slate-700: var(--text-muted);
+    --color-slate-305: var(--text-secondary);
 
     @keyframes fade-in-up {
         from {

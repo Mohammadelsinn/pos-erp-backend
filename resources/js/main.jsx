@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import PlaceholderPage from './pages/PlaceholderPage';
+import CashDrawer from './pages/CashDrawer';
 import StaffMembers from './pages/StaffMembers';
 import RolesManagement from './pages/RolesManagement';
 import PermissionsManagement from './pages/PermissionsManagement';
@@ -25,6 +26,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import POS from './pages/POS';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
+import Payments from './pages/Payments';
 
 function App() {
     return (
@@ -63,9 +65,9 @@ function App() {
                         {/* Accounting & Finance */}
                         <Route path="accounting" element={<PlaceholderPage title="General Ledger" />} />
                         <Route path="expenses" element={<PlaceholderPage title="Expenses Tracker" />} />
-                        <Route path="payments" element={<PlaceholderPage title="Payments" />} />
+                        <Route path="payments" element={<Payments />} />
                         <Route path="commissions" element={<PlaceholderPage title="Commissions" />} />
-                        <Route path="cash-drawer" element={<PlaceholderPage title="Cash Drawer" />} />
+                        <Route path="cash-drawer" element={<CashDrawer />} />
                         
                         {/* Staff & Locations */}
                         <Route path="customers" element={<PlaceholderPage title="Customers Profile" />} />

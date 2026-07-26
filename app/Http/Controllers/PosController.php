@@ -861,6 +861,24 @@ class PosController extends Controller
                 ]);
             }
 
+            // Cash drawer integration: Log cash sales in active register session
+            if (isset($validated['payment_method']) && strtolower($validated['payment_method']) === 'cash') {
+                $activeSession = \App\Models\CashDrawerSession::where('user_id', \Auth::id())
+                    ->where('branch_id', $validated['branch_id'])
+                    ->where('status', 'open')
+                    ->first();
+
+                if ($activeSession) {
+                    $activeSession->transactions()->create([
+                        'type' => 'sale',
+                        'amount' => $validated['total_amount'],
+                        'description' => 'Sale #' . ($sale->order_number ?? $sale->id),
+                        'sale_id' => $sale->id,
+                    ]);
+                    $activeSession->increment('expected_closing_balance', $validated['total_amount']);
+                }
+            }
+
             // Save items and adjust stock
             foreach ($validated['items'] as $item) {
                 $saleItem = \App\Models\SaleItem::create([

@@ -143,7 +143,7 @@ export default function Sidebar({ isOpen, toggleSidebar, isMobileOpen, closeMobi
                             </div>
                         )}
                         {isOpen && (
-                            <span className="font-bold text-sm bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent truncate tracking-tight">
+                            <span className="font-bold text-sm bg-gradient-to-r from-slate-100 to-slate-350 bg-clip-text text-transparent truncate tracking-tight">
                                 {companyInfo.name}
                             </span>
                         )}
