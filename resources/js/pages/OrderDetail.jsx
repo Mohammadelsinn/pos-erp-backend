@@ -20,7 +20,9 @@ import {
     Tag,
     Clock,
     DollarSign,
-    Eye
+    Eye,
+    BookOpen,
+    Scale
 } from 'lucide-react';
 
 export default function OrderDetail() {
@@ -43,6 +45,11 @@ export default function OrderDetail() {
     const [invoiceData, setInvoiceData] = useState(null);
     const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
     const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+
+    // Accounting entries states
+    const [journalEntries, setJournalEntries] = useState([]);
+    const [isLoadingJournal, setIsLoadingJournal] = useState(true);
+    const [journalError, setJournalError] = useState(null);
 
     const handleOpenInvoicePreview = async () => {
         setShowInvoicePreview(true);
@@ -74,9 +81,24 @@ export default function OrderDetail() {
         }
     };
 
+    const fetchJournalEntries = async () => {
+        setIsLoadingJournal(true);
+        setJournalError(null);
+        try {
+            const response = await axios.get(`/api/orders/${id}/accounting-entries`);
+            setJournalEntries(response.data || []);
+        } catch (err) {
+            console.error("Failed to load accounting entries:", err);
+            setJournalError(err.response?.data?.message || "Could not load accounting entries for this sale.");
+        } finally {
+            setIsLoadingJournal(false);
+        }
+    };
+
     useEffect(() => {
         if (id) {
             fetchOrderDetails();
+            fetchJournalEntries();
         }
     }, [id]);
 
@@ -569,6 +591,80 @@ export default function OrderDetail() {
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Accounting Entries Card */}
+                    <div className="bg-slate-900 border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
+                        <div className="p-5 border-b border-slate-800/60 flex items-center gap-2 bg-slate-900/60">
+                            <BookOpen className="w-5 h-5 text-indigo-400" />
+                            <h4 className="text-sm font-bold text-slate-200">Accounting Entries</h4>
+                        </div>
+
+                        {isLoadingJournal ? (
+                            <div className="p-8 flex flex-col items-center justify-center gap-3">
+                                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-xs text-slate-500 font-semibold">Loading journal entries...</p>
+                            </div>
+                        ) : journalError ? (
+                            <div className="p-6 flex flex-col items-center justify-center gap-2 text-center">
+                                <AlertTriangle className="w-6 h-6 text-slate-600" />
+                                <p className="text-xs text-slate-500 font-semibold max-w-xs">{journalError}</p>
+                            </div>
+                        ) : journalEntries.length === 0 ? (
+                            <div className="p-6 flex flex-col items-center justify-center gap-2 text-center">
+                                <BookOpen className="w-6 h-6 text-slate-650" />
+                                <p className="text-xs text-slate-500 font-semibold">No ledger postings recorded for this sale yet.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse text-xs font-semibold">
+                                    <thead>
+                                        <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400">
+                                            <th className="py-3.5 px-5">Account</th>
+                                            <th className="py-3.5 px-5">Memo</th>
+                                            <th className="py-3.5 px-5 text-right">Debit</th>
+                                            <th className="py-3.5 px-5 text-right">Credit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-850 text-slate-350">
+                                        {journalEntries.map((entry, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-955/20 transition-colors">
+                                                <td className="py-3.5 px-5">
+                                                    <span className="font-bold text-slate-200">
+                                                        {entry.account?.code ? `${entry.account.code} - ` : ''}{entry.account?.name || 'Unknown Account'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3.5 px-5 text-slate-450 text-[11px]">
+                                                    {entry.memo || '—'}
+                                                </td>
+                                                <td className="py-3.5 px-5 text-right font-mono text-slate-100">
+                                                    {Number(entry.debit || 0) > 0 ? `$${Number(entry.debit).toFixed(2)}` : '—'}
+                                                </td>
+                                                <td className="py-3.5 px-5 text-right font-mono text-slate-100">
+                                                    {Number(entry.credit || 0) > 0 ? `$${Number(entry.credit).toFixed(2)}` : '—'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t border-slate-800 bg-slate-950/30">
+                                            <td colSpan={2} className="py-3 px-5">
+                                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                                                    Totals
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-5 text-right font-mono font-bold text-slate-100">
+                                                ${journalEntries.reduce((sum, e) => sum + (Number(e.debit) || 0), 0).toFixed(2)}
+                                            </td>
+                                            <td className="py-3 px-5 text-right font-mono font-bold text-slate-100">
+                                                ${journalEntries.reduce((sum, e) => sum + (Number(e.credit) || 0), 0).toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Notes & Comments */}

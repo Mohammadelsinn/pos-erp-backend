@@ -3,10 +3,10 @@ import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { 
     LayoutGrid, Calculator, ShoppingBag, Package, Archive, 
-    ArrowUpRight, Truck, Warehouse, DollarSign, TrendingDown, 
+    ArrowUpRight, Truck, Warehouse, DollarSign, TrendingDown, TrendingUp,
     CreditCard, Percent, Key, Users, UserCheck, GitBranch, 
     CheckSquare, Store, FileText, Settings, Shield, ChevronLeft, ChevronRight, ChevronDown, Menu, Lock, Building,
-    AlertTriangle
+    AlertTriangle, BookOpen, Scale, ListChecks
 } from 'lucide-react';
 
 const navigationGroups = [
@@ -44,7 +44,12 @@ const navigationGroups = [
     {
         title: "Accounting & Finance",
         items: [
-            { name: "General Ledger", path: "/accounting", icon: DollarSign },
+            { name: "Financial Overview", path: "/accounting", icon: DollarSign },
+            { name: "General Ledger", path: "/accounting/general-ledger", icon: Scale },
+            { name: "Trial Balance", path: "/accounting/trial-balance", icon: ListChecks },
+            { name: "Chart of Accounts", path: "/accounting/chart-of-accounts", icon: FileText },
+            { name: "Manual Journal Entry", path: "/accounting/journal-entry", icon: BookOpen },
+            { name: "Profit & Loss Report", path: "/accounting/profit-loss", icon: TrendingUp },
             { name: "Expenses Tracker", path: "/expenses", icon: TrendingDown },
             { name: "Payments", path: "/payments", icon: CreditCard },
             { name: "Commissions", path: "/commissions", icon: Percent },

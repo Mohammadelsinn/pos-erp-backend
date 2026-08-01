@@ -27,6 +27,14 @@ import POS from './pages/POS';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import Payments from './pages/Payments';
+import Accounting from './pages/Accounting';
+import ChartOfAccounts from './pages/ChartOfAccounts';
+import ManualJournalEntry from './pages/ManualJournalEntry';
+import Expenses from './pages/Expenses';
+import ExpenseCategories from './pages/ExpenseCategories';
+import ProfitAndLoss from './pages/ProfitAndLoss';
+import GeneralLedger from './pages/GeneralLedger';
+import TrialBalance from './pages/TrialBalance';
 
 function App() {
     return (
@@ -63,8 +71,14 @@ function App() {
                         <Route path="warehouses" element={<PlaceholderPage title="Warehouses" />} />
                         
                         {/* Accounting & Finance */}
-                        <Route path="accounting" element={<PlaceholderPage title="General Ledger" />} />
-                        <Route path="expenses" element={<PlaceholderPage title="Expenses Tracker" />} />
+                        <Route path="accounting" element={<Accounting />} />
+                        <Route path="accounting/chart-of-accounts" element={<ChartOfAccounts />} />
+                        <Route path="accounting/journal-entry" element={<ManualJournalEntry />} />
+                        <Route path="accounting/profit-loss" element={<ProfitAndLoss />} />
+                        <Route path="accounting/general-ledger" element={<GeneralLedger />} />
+                        <Route path="accounting/trial-balance" element={<TrialBalance />} />
+                        <Route path="expenses" element={<Expenses />} />
+                        <Route path="expenses/categories" element={<ExpenseCategories />} />
                         <Route path="payments" element={<Payments />} />
                         <Route path="commissions" element={<PlaceholderPage title="Commissions" />} />
                         <Route path="cash-drawer" element={<CashDrawer />} />

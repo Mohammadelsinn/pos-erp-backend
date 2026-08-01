@@ -38,6 +38,8 @@ export default function Login() {
         const result = await login(roleEmail, 'password');
         if (result.success) {
             navigate('/dashboard');
+        } else {
+            setError(result.message || 'Login failed. Please check your credentials.');
         }
     };
 
@@ -182,10 +184,17 @@ export default function Login() {
                             </form>
                         ) : (
                             <div className="space-y-6">
+                                {error && (
+                                    <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2.5 animate-shake">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5"></div>
+                                        <span>{error}</span>
+                                    </div>
+                                )}
+
                                 <p className="text-slate-400 text-sm leading-relaxed">
                                     Use the quick-access profiles below to instantly log in with different system permissions.
                                 </p>
-                                
+
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => handleQuickLogin('admin@pos-erp.test')}

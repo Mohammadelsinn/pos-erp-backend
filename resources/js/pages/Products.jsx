@@ -367,7 +367,7 @@ export default function Products() {
 
                         {/* Bulk Action Controls */}
                         {selectedIds.length > 0 && (
-                            <div className="flex items-center gap-3 p-2 bg-indigo-650/10 border border-indigo-500/10 rounded-lg animate-fade-in">
+                            <div className="flex items-center gap-3 p-2 bg-indigo-500/10 border border-indigo-500/10 rounded-lg animate-fade-in">
                                 <span className="text-xs text-indigo-300 font-medium pl-1">
                                     {selectedIds.length} products selected
                                 </span>
@@ -738,7 +738,7 @@ export default function Products() {
                                 <button
                                     type="submit"
                                     disabled={submittingForm}
-                                    className="w-full py-2 bg-indigo-650 hover:bg-indigo-600 disabled:opacity-40 disabled:hover:bg-indigo-650 text-white text-xs font-semibold rounded-xl shadow-lg transition-colors"
+                                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow-lg transition-colors"
                                 >
                                     {submittingForm ? 'Saving...' : (categoryForm.id ? 'Update Category' : 'Create Category')}
                                 </button>
@@ -871,7 +871,7 @@ export default function Products() {
                                 <button
                                     type="submit"
                                     disabled={submittingForm}
-                                    className="w-full py-2 bg-indigo-650 hover:bg-indigo-600 disabled:opacity-40 disabled:hover:bg-indigo-650 text-white text-xs font-semibold rounded-xl shadow-lg transition-colors"
+                                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow-lg transition-colors"
                                 >
                                     {submittingForm ? 'Saving...' : (brandForm.id ? 'Update Brand' : 'Create Brand')}
                                 </button>

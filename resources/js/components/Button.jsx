@@ -16,10 +16,10 @@ export default function Button({
     const baseStyle = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 outline-none active:scale-[0.98] select-none disabled:opacity-50 disabled:pointer-events-none disabled:scale-100';
     
     const variants = {
-        primary: 'bg-gradient-to-r from-indigo-650 to-violet-650 hover:from-indigo-600 hover:to-violet-600 text-white shadow-lg shadow-indigo-650/15 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950',
+        primary: 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/15 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950',
         secondary: 'bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white focus:ring-2 focus:ring-slate-700 focus:ring-offset-2 focus:ring-offset-slate-950',
-        danger: 'bg-gradient-to-r from-rose-600 to-red-650 hover:from-rose-500 hover:to-red-600 text-white shadow-lg shadow-rose-600/10 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-950',
-        success: 'bg-gradient-to-r from-emerald-600 to-green-650 hover:from-emerald-505 hover:to-green-600 text-white shadow-lg shadow-emerald-650/10 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950',
+        danger: 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-600/10 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-950',
+        success: 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-lg shadow-emerald-600/10 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950',
         ghost: 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
     };
 

@@ -12,7 +12,7 @@ import {
     FileText, Plus, Edit, Trash2, Search, ArrowUpRight,
     Truck, Calendar, User, CreditCard, ChevronLeft,
     AlertTriangle, CheckSquare, XCircle, ShoppingBag, Eye,
-    AlertCircle
+    AlertCircle, BookOpen, Scale
 } from 'lucide-react';
 
 // Custom Searchable Dropdown Selection Component
@@ -166,6 +166,11 @@ export default function PurchaseOrders() {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [currentPO, setCurrentPO] = useState(null); // for edit/delete/receive actions
 
+    // Accounting entries state (for PO detail view)
+    const [journalEntries, setJournalEntries] = useState([]);
+    const [isLoadingJournal, setIsLoadingJournal] = useState(false);
+    const [journalError, setJournalError] = useState(null);
+
     // Form modal state
     const [formOpen, setFormOpen] = useState(false);
     const [formSupplierId, setFormSupplierId] = useState('');
@@ -247,6 +252,30 @@ export default function PurchaseOrders() {
             if (found) setViewingPO(found);
         }
     };
+
+    // Fetch accounting/journal entries linked to a purchase order
+    const fetchJournalEntries = async (poId) => {
+        setIsLoadingJournal(true);
+        setJournalError(null);
+        try {
+            const response = await axios.get(`/api/purchase-orders/${poId}/accounting-entries`);
+            setJournalEntries(response.data || []);
+        } catch (err) {
+            console.error('Failed to load accounting entries:', err);
+            setJournalError(err.response?.data?.message || 'Could not load accounting entries for this purchase order.');
+        } finally {
+            setIsLoadingJournal(false);
+        }
+    };
+
+    useEffect(() => {
+        if (viewingPO?.id) {
+            fetchJournalEntries(viewingPO.id);
+        } else {
+            setJournalEntries([]);
+            setJournalError(null);
+        }
+    }, [viewingPO?.id]);
 
     const resetFilters = () => {
         setSearchQuery('');
@@ -715,6 +744,46 @@ export default function PurchaseOrders() {
             render: (row) => (
                 <span className="font-mono text-indigo-400 font-bold block text-right">
                     ${(row.quantity_ordered * row.unit_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+            )
+        }
+    ];
+
+    // Detail page accounting/journal entry columns
+    const accountingColumns = [
+        {
+            key: 'account',
+            header: 'Account',
+            render: (row) => (
+                <span className="font-bold text-slate-200">
+                    {row.account?.code ? `${row.account.code} - ` : ''}{row.account?.name || 'Unknown Account'}
+                </span>
+            )
+        },
+        {
+            key: 'memo',
+            header: 'Memo',
+            render: (row) => (
+                <span className="text-slate-450 text-[11px]">{row.memo || '—'}</span>
+            )
+        },
+        {
+            key: 'debit',
+            header: 'Debit',
+            className: 'text-right',
+            render: (row) => (
+                <span className="font-mono text-slate-100 block text-right">
+                    {Number(row.debit || 0) > 0 ? `$${Number(row.debit).toFixed(2)}` : '—'}
+                </span>
+            )
+        },
+        {
+            key: 'credit',
+            header: 'Credit',
+            className: 'text-right',
+            render: (row) => (
+                <span className="font-mono text-slate-100 block text-right">
+                    {Number(row.credit || 0) > 0 ? `$${Number(row.credit).toFixed(2)}` : '—'}
                 </span>
             )
         }
@@ -1337,6 +1406,53 @@ export default function PurchaseOrders() {
                                 totalRecords={viewingPO.items?.length || 0}
                                 totalPages={1}
                             />
+                        </div>
+
+                        {/* Accounting Entries Section */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <BookOpen className="w-4.5 h-4.5 text-indigo-400" />
+                                Accounting Entries
+                            </h3>
+
+                            {isLoadingJournal ? (
+                                <div className="p-8 border rounded-2xl bg-slate-900/40 border-slate-850 flex flex-col items-center justify-center gap-3">
+                                    <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-xs text-slate-500 font-semibold">Loading journal entries...</p>
+                                </div>
+                            ) : journalError ? (
+                                <div className="p-6 border rounded-2xl bg-slate-900/40 border-slate-850 flex flex-col items-center justify-center gap-2 text-center">
+                                    <AlertTriangle className="w-6 h-6 text-slate-600" />
+                                    <p className="text-xs text-slate-500 font-semibold max-w-xs">{journalError}</p>
+                                </div>
+                            ) : journalEntries.length === 0 ? (
+                                <div className="p-6 border rounded-2xl bg-slate-900/40 border-slate-850 flex flex-col items-center justify-center gap-2 text-center">
+                                    <BookOpen className="w-6 h-6 text-slate-650" />
+                                    <p className="text-xs text-slate-500 font-semibold">No ledger postings recorded for this purchase order yet.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <Table
+                                        columns={accountingColumns}
+                                        data={journalEntries}
+                                        isLoading={false}
+                                        totalRecords={journalEntries.length}
+                                        totalPages={1}
+                                    />
+                                    <div className="flex items-center justify-end gap-6 px-1 text-xs">
+                                        <span className="flex items-center gap-1.5 font-bold text-slate-500 uppercase tracking-wider">
+                                            <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                                            Totals
+                                        </span>
+                                        <span className="font-mono font-bold text-slate-200">
+                                            Debit: ${journalEntries.reduce((sum, e) => sum + (Number(e.debit) || 0), 0).toFixed(2)}
+                                        </span>
+                                        <span className="font-mono font-bold text-slate-200">
+                                            Credit: ${journalEntries.reduce((sum, e) => sum + (Number(e.credit) || 0), 0).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Notes card */}

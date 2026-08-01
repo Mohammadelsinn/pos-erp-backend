@@ -18,6 +18,8 @@ use App\Http\Controllers\RefundController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AccountingController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -158,6 +160,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('orders/{id}/partial-refund', [RefundController::class, 'partialRefund']);
         Route::post('orders/{id}/exchange', [RefundController::class, 'exchange']);
         Route::get('orders/{id}', [OrderController::class, 'show']);
+
+        // Accounting Dashboard & General Ledger
+        Route::get('accounting/dashboard', [AccountingController::class, 'dashboard']);
+
+        // Chart of Accounts (COA)
+        Route::apiResource('accounting/accounts', AccountController::class);
     });
 
     // Cash drawer — requires manage_cash_drawer permission
